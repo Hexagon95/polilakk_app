@@ -1,7 +1,7 @@
 // ignore_for_file: use_build_context_synchronously, deprecated_member_use
 
-import 'package:logistic_app/routes/scan_check_stock.dart';
-import 'package:logistic_app/data_manager.dart';
+import 'package:polilakk_app/routes/scan_check_stock.dart';
+import 'package:polilakk_app/data_manager.dart';
 import '../global.dart';
 import 'package:dropdown_search/dropdown_search.dart';
 import 'package:masked_text/masked_text.dart';

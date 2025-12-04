@@ -2,8 +2,8 @@
 import 'package:flutter/foundation.dart';
 import 'package:ota_update/ota_update.dart';
 import 'package:flutter/material.dart';
-import 'package:logistic_app/data_manager.dart';
-import 'package:logistic_app/global.dart';
+import 'package:polilakk_app/data_manager.dart';
+import 'package:polilakk_app/global.dart';
 
 class LogInMenuFrame extends StatefulWidget{
   // ---------- < Constructor > ---------- ---------- ---------- ---------- ---------- ---------- ---------- ---------- <LogInMenuFrame>

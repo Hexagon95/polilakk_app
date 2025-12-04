@@ -1,9 +1,9 @@
 // ignore_for_file: use_build_context_synchronously, deprecated_member_use
-import 'package:logistic_app/global.dart';
-import 'package:logistic_app/data_manager.dart';
-import 'package:logistic_app/routes/incoming_deliverynote.dart';
-import 'package:logistic_app/routes/log_in.dart';
-import 'package:logistic_app/routes/scan_check_stock.dart';
+import 'package:polilakk_app/global.dart';
+import 'package:polilakk_app/data_manager.dart';
+import 'package:polilakk_app/routes/incoming_deliverynote.dart';
+import 'package:polilakk_app/routes/log_in.dart';
+import 'package:polilakk_app/routes/scan_check_stock.dart';
 import 'package:flutter/material.dart';
 import 'package:restart_app/restart_app.dart';
 

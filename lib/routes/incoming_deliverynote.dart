@@ -1,9 +1,9 @@
 // ignore_for_file: use_build_context_synchronously, deprecated_member_use
 import 'package:flutter/foundation.dart';
-import 'package:logistic_app/data_manager.dart';
-import 'package:logistic_app/global.dart';
+import 'package:polilakk_app/data_manager.dart';
+import 'package:polilakk_app/global.dart';
 import 'package:dropdown_search/dropdown_search.dart';
-import 'package:logistic_app/routes/menu.dart';
+import 'package:polilakk_app/routes/menu.dart';
 import 'package:masked_text/masked_text.dart';
 import 'package:flutter/material.dart';
 

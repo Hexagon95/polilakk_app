@@ -10,8 +10,8 @@ import 'package:flutter/foundation.dart';
 import 'package:intl/intl.dart';
 import 'package:signature/signature.dart';
 import 'package:flutter/material.dart';
-import 'package:logistic_app/data_manager.dart';
-import 'package:logistic_app/global.dart';
+import 'package:polilakk_app/data_manager.dart';
+import 'package:polilakk_app/global.dart';
 
 class ListDeliveryNote extends StatefulWidget{//-------- ---------- ---------- ---------- ---------- ---------- ---------- ---------- <QrScan>
   // ---------- < Constructor > ---------- ---------- ---------- ---------- ---------- ---------- ---------- ----------

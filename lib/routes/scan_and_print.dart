@@ -7,9 +7,9 @@ import 'package:flutter/material.dart';
 import 'package:qr_code_scanner/qr_code_scanner.dart';
 
 // These are from your project. Keep them as-is.
-import 'package:logistic_app/global.dart';
-import 'package:logistic_app/data_manager.dart';
-import 'package:logistic_app/src/scanner_datawedge.dart';
+import 'package:polilakk_app/global.dart';
+import 'package:polilakk_app/data_manager.dart';
+import 'package:polilakk_app/src/scanner_datawedge.dart';
 
 class ScanAndPrint extends StatefulWidget {
   const ScanAndPrint({super.key});
