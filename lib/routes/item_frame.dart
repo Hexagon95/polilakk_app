@@ -282,8 +282,10 @@ class ItemState extends State<ItemFrame> {//---------- ---------- ---------- ---
   }
 
   Future<void> buttonEnterBasketIDPressed() async{
+    scanOngoing = true;
     basketID = await Global.textInputDialog(context, title:   'ℹ️ Kosár azonosító', content: 'Adja meg a kosár azonosítóját:');
     if(basketID != null) setState(() => setWork());
+    scanOngoing = false;
   }
 
   Future<void> buttonPlacementCompletePressed() async{
