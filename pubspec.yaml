@@ -39,6 +39,7 @@ dependencies:
   audioplayers: ^6.4.0
   flutter_datawedge: 3.0.0
   http: ^1.6.0
+  intl: ^0.20.2
 
 dev_dependencies:
   flutter_test:

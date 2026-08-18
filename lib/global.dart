@@ -1,8 +1,8 @@
 // ignore_for_file: prefer_final_fields
 
 import 'package:audioplayers/audioplayers.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import 'src/scanner_datawedge.dart';
@@ -622,6 +622,37 @@ class Global{
     return result;
   }
 
+  static Future<String?> textInputDialog(BuildContext context, {String title = '', String content = ''}) async{
+    String? value;
+    Widget okButton = TextButton(
+      child: const Text('Ok'),
+      onPressed: () => Navigator.pop(context, value),
+    );
+    Widget cancelButton = TextButton(
+      child: const Text('Mégsem'),
+      onPressed: () => Navigator.pop(context, null),
+    );
+    AlertDialog dialog = AlertDialog(
+      title: Text(title, style: const TextStyle(
+        fontSize:    14,
+        fontWeight:  FontWeight.bold,
+      )),
+      content: TextFormField(
+        autofocus: true,
+        onChanged:  (input) => value = input,
+        decoration: InputDecoration(
+          labelText: content,
+          border:    const OutlineInputBorder(),
+        ),
+      ),
+      actions: [okButton, cancelButton],
+    );
+    return await showDialog<String>(
+      context:            context,
+      barrierDismissible: false,
+      builder:            (context) => dialog,
+    );
+  }
   
 
   // ---------- < Global Methods > ----- ---------- ---------- ---------- ---------- ---------- ---------- ---------- ---------- ---------- ---------- ---------- //

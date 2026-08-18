@@ -1,9 +1,10 @@
+import 'package:polilakk_app/src/scanner_datawedge.dart';
 import 'package:polilakk_app/data_manager.dart';
 import 'package:polilakk_app/global.dart';
-import 'package:polilakk_app/src/scanner_datawedge.dart';
 import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 
 
 class ItemFrame extends StatefulWidget {//---------- ---------- ---------- ---------- ---------- ---------- ---------- <ItemFrame>
@@ -21,10 +22,11 @@ class ItemState extends State<ItemFrame> {//---------- ---------- ---------- ---
   static List<dynamic> rawData = [];
 
   // ---------- [🌸 simple variables] --- ---------- ---------- ---------- ---------- ---------- ---------- ---------- ---------- ---------- ---------- //
-  bool scanOngoing =  false;  
+  bool scanOngoing =  false;
   ValueNotifier<ScannerDatas>? scannerDatas;
   ScannerDatawedge? scannerDatawedge;
   late double _contentWidth;
+  String? basketID;
 
   // ---------- [💎 complex variables] -- ---------- ---------- ---------- ---------- ---------- ---------- ---------- ---------- ---------- ---------- //
   int _index = 0; int get index => _index; set index(int value){
@@ -32,13 +34,14 @@ class ItemState extends State<ItemFrame> {//---------- ---------- ---------- ---
     _index = value;
   }
   Work _work = Work.default0; Work get work => _work; void setWork() {_work = switch(work){
-    Work.packageIdScan =>       Work.basketItemPlacement,
+    Work.packageIdScan =>       Work.basketIdScan,
+    Work.basketIdScan =>        Work.basketItemPlacement,
     Work.basketItemPlacement => Work.packageIdScan,
     _ =>                        Work.default0
   };}
   String get _workMessage => switch(work){
     Work.packageIdScan =>       'Olvassa be a csomag QR kódját!',
-    //Work.basketIdScan =>        'Olvassa be a kosáron lévő QR kódot!',
+    Work.basketIdScan =>        'Olvassa be a kosáron lévő QR kódot!',
     Work.basketItemPlacement => 'Helyezze a kosárba az anyagokat!',
     _ =>                        '⚠️ A Munkalap üres!',
   };
@@ -250,8 +253,7 @@ class ItemState extends State<ItemFrame> {//---------- ---------- ---------- ---
   );  
 
   // ---------- < Methods [1] > --------- ---------- ---------- ---------- ---------- ---------- ---------- ---------- ---------- ---------- ---------- //
-  Future buttonQrNotReadablePressed() async => setState(() => setWork());
-  Future buttonPlacementCompletePressed() async => setState(() {index++; setWork();});
+  Future<void> buttonQrNotReadablePressed() async => setState(() => setWork());  
 
   @override
   void initState(){
@@ -271,7 +273,7 @@ class ItemState extends State<ItemFrame> {//---------- ---------- ---------- ---
     return value.toString();
   }  
 
-  Future buttonMaterialNotFoundPressed() async{
+  Future<void> buttonMaterialNotFoundPressed() async{
     if(await Global.yesNoDialog(context,
       title:    '⚠️ Anyag Kihagyása!',
       content:  'Kívánja kihagyni a jelenlegi anyagot:\n${rawData[index]['rendeles'].toString()}',
@@ -279,8 +281,15 @@ class ItemState extends State<ItemFrame> {//---------- ---------- ---------- ---
     )) {setState(() => index++);}
   }
 
-  Future buttonEnterBasketIDPressed() async{
+  Future<void> buttonEnterBasketIDPressed() async{
+    basketID = await Global.textInputDialog(context, title:   'ℹ️ Kosár azonosító', content: 'Adja meg a kosár azonosítóját:');
+    if(basketID != null) setState(() => setWork());
+  }
 
+  Future<void> buttonPlacementCompletePressed() async{
+    stamp();
+    if(await finalCheck()) return;
+    setState(() {index++; setWork();});
   }
 
   @override
@@ -299,7 +308,10 @@ class ItemState extends State<ItemFrame> {//---------- ---------- ---------- ---
       content:  'Félbe kívánja szakítani az Előkezelést?',
       options:  const ['Igen', 'Mégsem'],
     )){
-      await DataManager(appAction: AppAction.callFinishElokezeles).beginCall;
+      await DataManager(
+        appAction:  AppAction.callFinishElokezeles,
+        input:      {'data': rawData.where((item) => item['ok'] == 1).toList()}
+      ).beginCall;
       Global.routeBack;
       if(mounted) Navigator.pop(context);
     }
@@ -321,6 +333,12 @@ class ItemState extends State<ItemFrame> {//---------- ---------- ---------- ---
         }
         break;
 
+      case Work.basketIdScan:
+        basketID = scannerDatas!.value.scanData.trim();
+        AudioPlayer().play(AssetSource('sounds/okay.mp3'));
+        setState(() => setWork());
+        break;
+
       default: break;
     }}
     catch(e){
@@ -329,6 +347,29 @@ class ItemState extends State<ItemFrame> {//---------- ---------- ---------- ---
     finally{
       scanOngoing = false;
     }
+  }
+
+  void stamp() {rawData[index] = {
+    ...rawData[index],
+    'ok':         1,
+    'kosar_id':   basketID,
+    'time_stamp': DateFormat('yyyy-MM-dd HH:mm:ss').format(DateTime.now()),
+    'user_id':    DataManager.userID
+  }; basketID = null;}
+
+  Future<bool> finalCheck() async{
+    if(index != rawData.length - 1) return false;
+    await DataManager(
+      appAction:  AppAction.callFinishElokezeles,
+      input:      {'data': rawData.where((item) => item['ok'] == 1).toList()}
+    ).beginCall;
+    await Global.showAlertDialog(context,
+      title:    'ℹ️ Előkezelés befejezve!',
+      content:  'Nincs több teendő!'
+    );
+    Global.routeBack;
+    if(mounted) Navigator.pop(context);
+    return true;
   }
 
   // ---------- < Methods [3] > --------- ---------- ---------- ---------- ---------- ---------- ---------- ---------- ---------- ---------- ---------- //

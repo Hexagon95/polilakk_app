@@ -40,19 +40,28 @@ class DataManager{
         Uri uriUrl =              Uri.parse('${urlPath}elokezeles.php');
         http.Response response =  await http.post(uriUrl, body: json.encode(queryParameters), headers: headers);
         data[appAction] =         (await jsonDecode(await jsonDecode(response.body)[0]['b'])) ?? [];
-        if(kDebugMode) {dev.log(data[appAction].toString());}
-        break;     
+        break;
+      
+      case AppAction.callFinishElokezeles:
+        var queryParameters = {
+          'customer':   customer,
+          'parameter':  jsonEncode(input['data'])
+        };
+        Uri uriUrl =              Uri.parse('${urlPath}finish_elokezeles.php');
+        http.Response response =  await http.post(uriUrl, body: json.encode(queryParameters), headers: headers);
+        data[appAction] =         await jsonDecode(response.body);
+        break;
 
       default: break;
-    }}
+    } if(kDebugMode) {dev.log('--------- $appAction --------- --------- --------- --------- --------- --------- ---------\n${data[appAction].toString()}');}}
     on SocketException{
       AudioPlayer().play(AssetSource('sounds/error.mp3'));
       isServerAvailable = false;
       return;
     }
     catch(e) {
-      if(kDebugMode) dev.log('---------- $appAction ----------\n$e');
-    }    
+      if(kDebugMode) dev.log('########## ERROR ########## ########## ########## ########## ########## ########## ##########\n$e');
+    }
     return data[appAction];
   }
 }
