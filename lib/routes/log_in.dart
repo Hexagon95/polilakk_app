@@ -1,6 +1,7 @@
+import 'package:polilakk_app/data_manager.dart';
+import 'package:polilakk_app/global.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:polilakk_app/global.dart';
 
 class LogInMenuFrame extends StatefulWidget {//------ ---------- ---------- ---------- ---------- ---------- ---------- <LogInMenuFrame>
   const LogInMenuFrame({super.key});
@@ -11,7 +12,6 @@ class LogInMenuFrame extends StatefulWidget {//------ ---------- ---------- ----
 
 class LogInMenuState extends State<LogInMenuFrame> {//---------- ---------- ---------- ---------- ---------- ---------- <LogInMenuState>
   // ---------- [🌸 simple variables] --- ---------- ---------- ---------- ---------- ---------- ---------- ---------- ---------- ---------- ---------- //
-  final String _version = '1.0.0';
   late double _contentWidth;
 
   // ---------- < WidgetBuild [0] > ----- ---------- ---------- ---------- ---------- ---------- ---------- ---------- ---------- ---------- ---------- //
@@ -43,7 +43,7 @@ class LogInMenuState extends State<LogInMenuFrame> {//---------- ---------- ----
   List<Widget> get _logInWidgets => [
     _drawLogo,
     const SizedBox(height: 30),
-    _drawVersion,
+    _drawVerzio,
     const SizedBox(height: 40),
     _drawLogInButton,
   ];
@@ -66,10 +66,9 @@ class LogInMenuState extends State<LogInMenuFrame> {//---------- ---------- ----
     ),
   );  
 
-  Widget get _drawVersion => Text('v$_version',
-    textAlign:  TextAlign.center,
-    style:      const TextStyle(color: Color.fromRGBO(47, 37, 135, 1), fontSize: 18, fontWeight: FontWeight.bold),
-  );
+  Widget get _drawVerzio => Column(children: [
+    Text('v${DataManager.thisVersion}${(DataManager.verzioTest == 0)? '' : '   [Teszt: ${DataManager.verzioTest.toString()}]'}', style: TextStyle(color: Global.getColorOfButton(ButtonState.default0), fontSize: 26, fontWeight: FontWeight.bold)),
+  ]);
 
   Widget get _drawLogInButton => SizedBox(width: double.infinity, height: 48, child: ElevatedButton(
     onPressed:  _logInPressed,

@@ -12,9 +12,14 @@ class DataManager{
   void get bookMarks {beginCall;}
 
   // ---------- [⚡️ static variables] --- ---------- ---------- ---------- ---------- ---------- ---------- ---------- ---------- ---------- ---------- //
-  static const String urlPath =         'https://termeles.koat.hu/android/polilakk_app/';  
-  static Map<AppAction, dynamic> data = {};
+  static const String thisVersion =     '0.1a';
+  static int verzioTest =               0;            // <--- Anything other than 0 will draw "[Teszt #]" at the LogIn screen.
+  static String actualVersion =         thisVersion;
   static String customer =              'Koat2';
+
+  static const String urlPath =         'https://termeles.koat.hu/android/polilakk_app/';
+  static const String installerLink =   'https://app.mosaic.hu/ota/polilakk_app/$thisVersion/app-release.apk';
+  static Map<AppAction, dynamic> data = {};
   static bool isServerAvailable =       true;
   static int userID =                   1;
 

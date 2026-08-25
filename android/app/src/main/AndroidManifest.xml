@@ -1,6 +1,6 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
     <application
-        android:label="polilakk_app"
+        android:label="KOAT_app"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher">
         <activity
