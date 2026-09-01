@@ -12,7 +12,7 @@ class DataManager{
   void get bookMarks {beginCall;}
 
   // ---------- [⚡️ static variables] --- ---------- ---------- ---------- ---------- ---------- ---------- ---------- ---------- ---------- ---------- //
-  static const String thisVersion =     '0.1a';
+  static const String thisVersion =     '0.1c';
   static int verzioTest =               0;            // <--- Anything other than 0 will draw "[Teszt #]" at the LogIn screen.
   static String actualVersion =         thisVersion;
   static String customer =              'Koat2';
@@ -45,6 +45,26 @@ class DataManager{
         Uri uriUrl =              Uri.parse('${urlPath}elokezeles.php');
         http.Response response =  await http.post(uriUrl, body: json.encode(queryParameters), headers: headers);
         data[appAction] =         (await jsonDecode(await jsonDecode(response.body)[0]['b'])) ?? [];
+        break;
+
+      case AppAction.callTermelesKosar:
+        var queryParameters = {
+          'customer':   customer,
+        };
+        Uri uriUrl =              Uri.parse('${urlPath}termeles_kosar.php');
+        http.Response response =  await http.post(uriUrl, body: json.encode(queryParameters), headers: headers);
+        data[appAction] =         (await jsonDecode(await jsonDecode(response.body)[0]['b'])) ?? [];
+        break;
+      
+      case AppAction.callFinishTermelsKosar:
+        var queryParameters = {
+          'customer': customer,
+          'id':       input['id'],
+          'user_id':  input['user_id']
+        };
+        Uri uriUrl =              Uri.parse('${urlPath}finish_termeles_kosar.php');
+        http.Response response =  await http.post(uriUrl, body: json.encode(queryParameters), headers: headers);
+        data[appAction] =         await jsonDecode(response.body);
         break;
       
       case AppAction.callFinishElokezeles:

@@ -9,7 +9,7 @@ import 'src/scanner_datawedge.dart';
 // ---------- < Enums > --- ---------- ---------- ---------- ----------
 enum AppAction{
   routeLogIn, routeMenu, routeItemFrame,
-  callLogInSecondTime, callElokezeles, callFinishElokezeles,
+  callLogInSecondTime, callElokezeles, callFinishElokezeles, callTermelesKosar, callFinishTermelsKosar,
   default0, 
 }
 enum ButtonState{hidden, loading, disabled, error, default0}
@@ -80,7 +80,254 @@ class Global{
     );
   }  
 
-  static Future<int?> integerDialog(BuildContext context, {String title = '', String content = ''}) async{
+  /// Example: `Global.integerDialog(context, title: 'Darabszám', content: 'Adja meg:', max: 100, extraButtons: [{'text': 'Nem találom az anyagot', 'icon': Icons.search_off, 'isConfirm': true}]);`
+  static Future<int?> integerDialog(
+    BuildContext context, {
+    String title = '',
+    String content = '',
+    int? max,
+    List<Map<String, dynamic>>? extraButtons,
+  }) async{
+    int? varInt;
+    BoxDecoration customBoxDecoration = BoxDecoration(
+      border: Border.all(color: const Color.fromARGB(130, 184, 184, 184), width: 1),
+      color: Colors.white,
+      borderRadius: const BorderRadius.all(Radius.circular(8)),
+    );
+    Widget okButton = TextButton(
+      child: const Text('Ok'),
+      onPressed: (){
+        if(varInt != null){
+          Navigator.pop(context, varInt);
+        }
+      },
+    );
+    Widget cancel = TextButton(
+      child: const Text('Mégsem'),
+      onPressed: () => Navigator.pop(context, null),
+    );
+    List<Widget> specialButtons = [
+      for(int i = 0; i < (extraButtons?.length ?? 0); i++)
+        TextButton(
+          style: TextButton.styleFrom(
+            foregroundColor: const Color(0xFFFFFFFF),
+            backgroundColor: const Color(0xFF2F2587),
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(8),
+            ),
+          ),
+          onPressed: () async{
+            Map<String, dynamic> button = extraButtons[i];
+            if(button['isConfirm'] == true){
+              bool confirm = await yesNoDialog(
+                context,
+                title: '⚠️ Megerősítés',
+                content: button['text'],
+              );
+              if(!confirm) return;
+            }
+            if(context.mounted){
+              Navigator.pop(context, -(i + 1));
+            }
+          },
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              if(extraButtons![i]['icon'] != null) ...[
+                Icon(extraButtons[i]['icon'], size: 20),
+                const SizedBox(width: 6),
+              ],
+              Text(extraButtons[i]['text']),
+            ],
+          ),
+        ),
+    ];
+    AlertDialog infoRegistry = AlertDialog(
+      title: Text(
+        title,
+        style: const TextStyle(
+          fontSize: 14,
+          fontWeight: FontWeight.bold,
+        ),
+      ),
+      content: Container(
+        height: 55,
+        decoration: customBoxDecoration,
+        child: TextFormField(
+          autofocus: true,
+          onChanged: (value) => varInt = int.tryParse(value),
+          inputFormatters: [
+            FilteringTextInputFormatter.digitsOnly,
+            TextInputFormatter.withFunction((oldValue, newValue){
+              if(newValue.text.isEmpty) return newValue;
+              int? value = int.tryParse(newValue.text);
+              if(value == null || value <= 0) return oldValue;
+              if(max != null && value > max) return oldValue;
+              return newValue;
+            }),
+          ],
+          decoration: InputDecoration(
+            contentPadding: const EdgeInsets.all(10),
+            labelText: content,
+            border: InputBorder.none,
+          ),
+          style: const TextStyle(
+            color: Color.fromARGB(255, 51, 51, 51),
+          ),
+          keyboardType: TextInputType.number,
+        ),
+      ),
+      actions: [
+        SizedBox(
+          width: double.infinity,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              if(specialButtons.isNotEmpty) ...[
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: specialButtons,
+                ),
+                const SizedBox(height: 8),
+              ],
+              Row(
+                mainAxisAlignment: MainAxisAlignment.end,
+                children: [
+                  okButton,
+                  cancel,
+                ],
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+    return await showDialog(
+      context: context,
+      builder: (BuildContext context) => infoRegistry,
+      barrierDismissible: false,
+    );
+  }
+
+  static Future<List<Map<String, dynamic>>?> selectItemsFromListDialog(
+    BuildContext context, {
+    String title = '',
+    required List<Map<String, dynamic>> items,
+    Map<String, Widget Function(dynamic value)>? design,
+  }) async{
+    Set<int> selectedIndexes = {};
+    return await showDialog<List<Map<String, dynamic>>>(
+      context: context,
+      barrierDismissible: false,
+      builder: (BuildContext context){
+        return StatefulBuilder(
+          builder: (context, setState){
+            return AlertDialog(
+              title: Text(
+                title,
+                style: const TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              content: SizedBox(
+                width: double.maxFinite,
+                child: ListView.builder(
+                  shrinkWrap: true,
+                  itemCount: items.length,
+                  itemBuilder: (context, index){
+                    Map<String, dynamic> item = items[index];
+                    bool selected = selectedIndexes.contains(index);
+                    return InkWell(
+                      onTap: (){
+                        setState((){
+                          if(selected){
+                            selectedIndexes.remove(index);
+                          }
+                          else{
+                            selectedIndexes.add(index);
+                          }
+                        });
+                      },
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+                        margin: const EdgeInsets.only(bottom: 6),
+                        decoration: BoxDecoration(
+                          color: selected ? const Color(0x182F2587) : Colors.white,
+                          border: Border.all(
+                            color: selected ? const Color(0xFF2F2587) : const Color.fromARGB(130, 184, 184, 184),
+                            width: 1,
+                          ),
+                          borderRadius: const BorderRadius.all(Radius.circular(8)),
+                        ),
+                        child: Row(
+                          children: [
+                            Checkbox(
+                              value: selected,
+                              onChanged: (_){
+                                setState((){
+                                  if(selected){
+                                    selectedIndexes.remove(index);
+                                  }
+                                  else{
+                                    selectedIndexes.add(index);
+                                  }
+                                });
+                              },
+                            ),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  for(MapEntry<String, dynamic> entry in item.entries)
+                                    design?[entry.key] != null
+                                      ? design![entry.key]!(entry.value)
+                                      : Text(
+                                          '${entry.key}: ${entry.value}',
+                                          style: const TextStyle(
+                                            fontSize: 14,
+                                            color: Color.fromARGB(255, 51, 51, 51),
+                                          ),
+                                        ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    );
+                  },
+                ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: selectedIndexes.isEmpty
+                    ? null
+                    : (){
+                        List<Map<String, dynamic>> selectedItems = [
+                          for(int i = 0; i < items.length; i++)
+                            if(selectedIndexes.contains(i))
+                              items[i],
+                        ];
+                        Navigator.pop(context, selectedItems);
+                      },
+                  child: const Text('Ok'),
+                ),
+                TextButton(
+                  onPressed: () => Navigator.pop(context, null),
+                  child: const Text('Mégsem'),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+  }
+
+  /*static Future<int?> integerDialog(BuildContext context, {String title = '', String content = ''}) async{
     int? varInt;
     BoxDecoration customBoxDecoration = BoxDecoration(
       border:       Border.all(color: const Color.fromARGB(130, 184, 184, 184), width: 1),
@@ -110,7 +357,7 @@ class Global{
       builder:            (BuildContext context) => infoRegistry,
       barrierDismissible: false
     );
-  }
+  }*/
 
   static Future<String?> plateNuberDialog(BuildContext context, {String title = '', String content = ''}) async{
     // --------- < Variables > ---------- ---------- ---------- ---------- ---------- ---------- ---------- ---------- ---------- //

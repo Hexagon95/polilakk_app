@@ -1,7 +1,7 @@
 <?php
 header('Content-Type: application/json; charset=utf-8');
 include 'sql/sql_commands.php';
-include 'sql/altered_database_managers/dm_parameter_output.php';
+include 'sql/database_manager.php';
 
 $task = new Task();
 echo json_encode($task->getResult());
@@ -16,7 +16,7 @@ class Task{
     }
 
     // ---------- <Constructors> ------ ---------- ---------- ---------- ---------- ---------- ---------- ----------
-    function __construct(){
+    function __construct(){        
         $this->_inizialite();        
     }
 
@@ -25,10 +25,8 @@ class Task{
         $this->request =            json_decode(file_get_contents('php://input'), true);
         $this->sqlCommand =         new SqlCommand();
         $this->databaseManager =    new DatabaseManager(
-            $this->sqlCommand->exec_termelesFolyamat1Felvitele(),
-            [
-                'parameter' =>  $this->request['parameter']
-            ],
+            $this->sqlCommand->select_termelesKosar(),
+            [],
             $this->request['customer']
         );
         $this->result =             $this->databaseManager->getData();
