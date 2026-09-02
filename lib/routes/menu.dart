@@ -1,4 +1,5 @@
-import 'package:polilakk_app/routes/item_frame.dart';
+import 'package:polilakk_app/routes/route_festesre_felrakas.dart';
+import 'package:polilakk_app/routes/route_elokezeles.dart';
 import 'package:polilakk_app/data_manager.dart';
 import 'package:polilakk_app/global.dart';
 import 'package:flutter/material.dart';
@@ -78,8 +79,9 @@ class MenuState extends State<MenuFrame> {//---------- ---------- ---------- ---
     height:  55,
     child:   ElevatedButton(
       onPressed: switch(text) {
-        'Előkezelés' => buttonElokezelesPressed,
-        _            => null,
+        'Előkezelés' =>         buttonElokezelesPressed,
+        'Festésre felrakás' =>  buttonFestesreFelrakasPressed,
+        _            =>         null,
       },
       style:      ElevatedButton.styleFrom(
         backgroundColor: const Color(0xFF2F2587),
@@ -95,9 +97,15 @@ class MenuState extends State<MenuFrame> {//---------- ---------- ---------- ---
   );
 
   // ---------- < Methods [1] > --------- ---------- ---------- ---------- ---------- ---------- ---------- ---------- ---------- ---------- ---------- //
-  Future buttonElokezelesPressed() async{
-    ItemState.rawData = await DataManager(appAction: AppAction.callElokezeles).beginCall;
-    Global.routeNext =  AppAction.routeItemFrame;
-    await Navigator.pushNamed(context, '/menu/item_frame');
+  Future<void> buttonElokezelesPressed() async{
+    RouteElokezelesState.rawData = await DataManager(appAction: AppAction.callElokezeles).beginCall;
+    Global.routeNext =  AppAction.routeElokezeles;
+    await Navigator.pushNamed(context, '/menu/elokezeles');
+  }
+
+  Future<void> buttonFestesreFelrakasPressed() async{
+    RouteFestesreFelrakasState.rawData = await DataManager(appAction: AppAction.callFestesreFelrakas).beginCall;
+    Global.routeNext =  AppAction.routeFestesreFelrakas;
+    await Navigator.pushNamed(context, '/menu/festesre_felrakas');
   }
 }

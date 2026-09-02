@@ -9,15 +9,15 @@ import 'package:intl/intl.dart';
 enum Work{itemSelection, packageIdScan, basketIdScan, basketItemPlacement, default0}
 enum RStatus{done, notFound, default0}
 
-class ItemFrame extends StatefulWidget {//---------- ---------- ---------- ---------- ---------- ---------- ---------- <ItemFrame>
-  const ItemFrame({super.key});
+class RouteElokezeles extends StatefulWidget {//---------- ---------- ---------- ---------- ---------- ---------- ---------- <ItemFrame>
+  const RouteElokezeles({super.key});
 
 
   @override
-  State<ItemFrame> createState() => ItemState();
+  State<RouteElokezeles> createState() => RouteElokezelesState();
 }
 
-class ItemState extends State<ItemFrame> {//---------- ---------- ---------- ---------- ---------- ---------- ---------- <ItemState>
+class RouteElokezelesState extends State<RouteElokezeles> {//---------- ---------- ---------- ---------- ---------- ---------- ---------- <ItemState>
   // ---------- [⚡️ static variables] --- ---------- ---------- ---------- ---------- ---------- ---------- ---------- ---------- ---------- ---------- //
   static List<dynamic> rawData = [];
 
@@ -173,6 +173,7 @@ class ItemState extends State<ItemFrame> {//---------- ---------- ---------- ---
     ),
     child: Row(children: [
       for(final button in switch(work){
+        Work.itemSelection       => [_drawFinishBasket],
         Work.packageIdScan       => [_drawButtonSkip, _drawFinishBasket],
         Work.basketIdScan        => [_drawButtonEnterBasketID],
         Work.basketItemPlacement => [_drawButtonPlacementComplete],
@@ -812,8 +813,9 @@ class ItemState extends State<ItemFrame> {//---------- ---------- ---------- ---
   Future<void> _buttonFinishBasketPressed() async{
     try{
       List<Map<String, dynamic>>? result = await Global.selectItemsFromListDialog(context,
-        items:  List<Map<String, dynamic>>.from(await DataManager(appAction: AppAction.callTermelesKosar).beginCall),
-        title:  'ℹ️ Válassza ki a lezárandó kosarakat!',
+        items:          List<Map<String, dynamic>>.from(await DataManager(appAction: AppAction.callTermelesKosar).beginCall),
+        title:          'ℹ️ Válassza ki a lezárandó kosarakat!',
+        confirmString:  'ℹ️ Megerősíti a kiválasztott kosarak lezárását?',
         design: {
           'kosar': (value) => Row(
             children: [
@@ -838,9 +840,20 @@ class ItemState extends State<ItemFrame> {//---------- ---------- ---------- ---
           ),
         },
       );
-      if(result != null && result.isNotEmpty) {for(dynamic item in result){
-        
-      }}
+      if(result != null && result.isNotEmpty){
+        List<dynamic> message = [];
+        for(dynamic item in result){
+          message.add(await DataManager(appAction: AppAction.callFinishTermelsKosar, input: {
+            'id':       item['kosar'],
+            'user_id':  DataManager.userID
+          }).beginCall);
+        }
+        String cleanMessage = message.join('\n').replaceAll(RegExp(r'[\[\]]'), '').trim();
+        await Global.showAlertDialog(context,
+          title: 'ℹ️ Procedúra Végrehajtva!',
+          content: cleanMessage.isEmpty ? '✅' : cleanMessage
+        );
+      }
     }
     catch(e){
       if(kDebugMode) print(e.toString());

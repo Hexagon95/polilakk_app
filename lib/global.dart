@@ -8,8 +8,9 @@ import 'package:flutter/services.dart';
 import 'src/scanner_datawedge.dart';
 // ---------- < Enums > --- ---------- ---------- ---------- ----------
 enum AppAction{
-  routeLogIn, routeMenu, routeItemFrame,
-  callLogInSecondTime, callElokezeles, callFinishElokezeles, callTermelesKosar, callFinishTermelsKosar,
+  routeLogIn, routeMenu, routeElokezeles, routeFestesreFelrakas,
+  callLogInSecondTime, callElokezeles, callTermelesKosar, callFestesreFelrakas,
+  callFinishElokezeles, callFinishTermelsKosar,
   default0, 
 }
 enum ButtonState{hidden, loading, disabled, error, default0}
@@ -26,7 +27,8 @@ class Global{
     switch (value) {
       case AppAction.routeLogIn:                       _routes[check(0)] =   value;  break;
       case AppAction.routeMenu:                        _routes[check(1)] =   value;  break;
-      case AppAction.routeItemFrame:                   _routes[check(2)] =   value;  break;
+      case AppAction.routeElokezeles:                  _routes[check(2)] =   value;  break;
+      case AppAction.routeFestesreFelrakas:            _routes[check(2)] =   value;  break;
       default:  throw Exception('Default rout has been thrown!!!!');
     }
     _printRoutes;
@@ -216,6 +218,7 @@ class Global{
     String title = '',
     required List<Map<String, dynamic>> items,
     Map<String, Widget Function(dynamic value)>? design,
+    String confirmString = 'Megerősíti a végrehajtást?',
   }) async{
     Set<int> selectedIndexes = {};
     return await showDialog<List<Map<String, dynamic>>>(
@@ -234,90 +237,113 @@ class Global{
               ),
               content: SizedBox(
                 width: double.maxFinite,
-                child: ListView.builder(
-                  shrinkWrap: true,
-                  itemCount: items.length,
-                  itemBuilder: (context, index){
-                    Map<String, dynamic> item = items[index];
-                    bool selected = selectedIndexes.contains(index);
-                    return InkWell(
-                      onTap: (){
-                        setState((){
-                          if(selected){
-                            selectedIndexes.remove(index);
-                          }
-                          else{
-                            selectedIndexes.add(index);
-                          }
-                        });
-                      },
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
-                        margin: const EdgeInsets.only(bottom: 6),
-                        decoration: BoxDecoration(
-                          color: selected ? const Color(0x182F2587) : Colors.white,
-                          border: Border.all(
-                            color: selected ? const Color(0xFF2F2587) : const Color.fromARGB(130, 184, 184, 184),
-                            width: 1,
+                child: items.isEmpty
+                  ? const Padding(
+                      padding: EdgeInsets.symmetric(vertical: 30),
+                      child: Center(
+                        child: Text(
+                          'Nincs megjelenítendő adat.',
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            fontSize: 15,
+                            color: Color(0xFF777777),
                           ),
-                          borderRadius: const BorderRadius.all(Radius.circular(8)),
-                        ),
-                        child: Row(
-                          children: [
-                            Checkbox(
-                              value: selected,
-                              onChanged: (_){
-                                setState((){
-                                  if(selected){
-                                    selectedIndexes.remove(index);
-                                  }
-                                  else{
-                                    selectedIndexes.add(index);
-                                  }
-                                });
-                              },
-                            ),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  for(MapEntry<String, dynamic> entry in item.entries)
-                                    design?[entry.key] != null
-                                      ? design![entry.key]!(entry.value)
-                                      : Text(
-                                          '${entry.key}: ${entry.value}',
-                                          style: const TextStyle(
-                                            fontSize: 14,
-                                            color: Color.fromARGB(255, 51, 51, 51),
-                                          ),
-                                        ),
-                                ],
-                              ),
-                            ),
-                          ],
                         ),
                       ),
-                    );
-                  },
-                ),
+                    )
+                  : ListView.builder(
+                      shrinkWrap: true,
+                      itemCount: items.length,
+                      itemBuilder: (context, index){
+                        Map<String, dynamic> item = items[index];
+                        bool selected = selectedIndexes.contains(index);
+                        return InkWell(
+                          onTap: (){
+                            setState((){
+                              if(selected){
+                                selectedIndexes.remove(index);
+                              }
+                              else{
+                                selectedIndexes.add(index);
+                              }
+                            });
+                          },
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+                            margin: const EdgeInsets.only(bottom: 6),
+                            decoration: BoxDecoration(
+                              color: selected ? const Color(0x182F2587) : Colors.white,
+                              border: Border.all(
+                                color: selected ? const Color(0xFF2F2587) : const Color.fromARGB(130, 184, 184, 184),
+                                width: 1,
+                              ),
+                              borderRadius: const BorderRadius.all(Radius.circular(8)),
+                            ),
+                            child: Row(
+                              children: [
+                                Checkbox(
+                                  value: selected,
+                                  onChanged: (_){
+                                    setState((){
+                                      if(selected){
+                                        selectedIndexes.remove(index);
+                                      }
+                                      else{
+                                        selectedIndexes.add(index);
+                                      }
+                                    });
+                                  },
+                                ),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      for(MapEntry<String, dynamic> entry in item.entries)
+                                        design?[entry.key] != null
+                                          ? design![entry.key]!(entry.value)
+                                          : Text(
+                                              '${entry.key}: ${entry.value}',
+                                              style: const TextStyle(
+                                                fontSize: 14,
+                                                color: Color.fromARGB(255, 51, 51, 51),
+                                              ),
+                                            ),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        );
+                      },
+                    ),
               ),
               actions: [
-                TextButton(
-                  onPressed: selectedIndexes.isEmpty
-                    ? null
-                    : (){
-                        List<Map<String, dynamic>> selectedItems = [
-                          for(int i = 0; i < items.length; i++)
-                            if(selectedIndexes.contains(i))
-                              items[i],
-                        ];
-                        Navigator.pop(context, selectedItems);
-                      },
-                  child: const Text('Ok'),
-                ),
+                if(items.isNotEmpty)
+                  TextButton(
+                    onPressed: selectedIndexes.isEmpty
+                      ? null
+                      : () async{
+                          bool confirm = await yesNoDialog(
+                            context,
+                            title: '⚠️ Megerősítés',
+                            content: confirmString,
+                          );
+                          if(!confirm) return;
+                          List<Map<String, dynamic>> selectedItems = [
+                            for(int i = 0; i < items.length; i++)
+                              if(selectedIndexes.contains(i))
+                                items[i],
+                          ];
+                          if(context.mounted){
+                            Navigator.pop(context, selectedItems);
+                          }
+                        },
+                    child: const Text('Ok'),
+                  ),
                 TextButton(
                   onPressed: () => Navigator.pop(context, null),
-                  child: const Text('Mégsem'),
+                  child: Text(items.isEmpty ? 'Bezárás' : 'Mégsem'),
                 ),
               ],
             );
