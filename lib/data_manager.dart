@@ -12,7 +12,7 @@ class DataManager{
   void get bookMarks {beginCall;}
 
   // ---------- [⚡️ static variables] --- ---------- ---------- ---------- ---------- ---------- ---------- ---------- ---------- ---------- ---------- //
-  static const String thisVersion =     '0.1f1';
+  static const String thisVersion =     '0.1g';
   static int verzioTest =               0;            // <--- Anything other than 0 will draw "[Teszt #]" at the LogIn screen.
   static String actualVersion =         thisVersion;
   static String customer =              'Koat2';
@@ -44,7 +44,7 @@ class DataManager{
         };
         Uri uriUrl =              Uri.parse('${urlPath}elokezeles.php');
         http.Response response =  await http.post(uriUrl, body: json.encode(queryParameters), headers: headers);
-        data[appAction] =         (await jsonDecode(await jsonDecode(response.body)[0]['b'])) ?? [];
+        data[appAction] =         (await jsonDecode(await jsonDecode(response.body)[0]['b']));
         break;
 
       case AppAction.callFestesreFelrakas:
@@ -53,7 +53,7 @@ class DataManager{
         };
         Uri uriUrl =              Uri.parse('${urlPath}festesre_felrakas.php');
         http.Response response =  await http.post(uriUrl, body: json.encode(queryParameters), headers: headers);
-        data[appAction] =         (await jsonDecode(await jsonDecode(response.body)[0]['b'])) ?? [];
+        data[appAction] =         (await jsonDecode(await jsonDecode(response.body)[0]['b']));
         break;
 
       case AppAction.callTermelesKosar:
@@ -62,7 +62,7 @@ class DataManager{
         };
         Uri uriUrl =              Uri.parse('${urlPath}termeles_kosar.php');
         http.Response response =  await http.post(uriUrl, body: json.encode(queryParameters), headers: headers);
-        data[appAction] =         (await jsonDecode(await jsonDecode(response.body)[0]['b'])) ?? [];
+        data[appAction] =         (await jsonDecode(await jsonDecode(response.body)[0]['b']));
         break;
       
       case AppAction.callFinishTermelsKosar:
@@ -101,10 +101,11 @@ class DataManager{
     on SocketException{
       AudioPlayer().play(AssetSource('sounds/error.mp3'));
       isServerAvailable = false;
-      return;
+      data[appAction] =   [];
     }
     catch(e) {
       if(kDebugMode) dev.log('########## ERROR ########## ########## ########## ########## ########## ########## ##########\n$e');
+      data[appAction] =   [];
     }
     return data[appAction];
   }

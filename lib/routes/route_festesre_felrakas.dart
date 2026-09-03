@@ -217,97 +217,125 @@ class RouteFestesreFelrakasState extends State<RouteFestesreFelrakas> {//-------
 
   Widget _drawArticleRow(dynamic item){
     bool isCompleted = _isCompleted(item);
-    return InkWell(
-      onTap: isCompleted ? null : () => selectItem(item),
-      borderRadius: BorderRadius.circular(9),
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 200),
-        padding:  const EdgeInsets.all(8),
-        decoration: BoxDecoration(
-          color:        isCompleted ? const Color(0xFFDCF5E4) : const Color(0x00000000),
+    return Stack(
+      clipBehavior: Clip.none,
+      children: [
+        InkWell(
+          onTap: isCompleted ? null : () => selectItem(item),
           borderRadius: BorderRadius.circular(9),
-          border: isCompleted
-            ? Border.all(color: const Color(0x6633AA55), width: 1)
-            : null,
-        ),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.center,
-          children: [
-            Container(
-              width:   72,
-              height:  58,
-              padding: const EdgeInsets.all(4),
-              decoration: BoxDecoration(
-                color:        const Color(0xFFFFFFFF),
-                borderRadius: BorderRadius.circular(7),
-                border: Border.all(
-                  color: isCompleted ? const Color(0x5533AA55) : const Color(0x22000000),
-                ),
-              ),
-              child: Image.network(
-                item['picture']?.toString() ?? '',
-                fit: BoxFit.contain,
-                errorBuilder: (context, error, stackTrace) => const Icon(
-                  Icons.image_not_supported_outlined,
-                  size:  30,
-                  color: Color(0xFF999999),
-                ),
-              ),
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 200),
+            padding:  const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color:        isCompleted ? const Color(0xFFDCF5E4) : const Color(0x00000000),
+              borderRadius: BorderRadius.circular(9),
+              border: isCompleted
+                ? Border.all(color: const Color(0x6633AA55), width: 1)
+                : null,
             ),
-            const SizedBox(width: 12),
-            Expanded(child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  _displayValue(item['cikkszam']),
-                  style: TextStyle(
-                    fontSize:   17,
-                    fontWeight: FontWeight.bold,
-                    color:      isCompleted ? const Color(0xFF228844) : const Color(0xFF333333),
-                  ),
-                ),
-                const SizedBox(height: 5),
-                _drawItemValue(Icons.layers_outlined, 'Réteg', item['reteg'], isCompleted: isCompleted),
-                const SizedBox(height: 3),
-                _drawItemValue(Icons.palette_outlined, 'Szín', item['szin'], isCompleted: isCompleted),
-                if(isCompleted) ...[
-                  const SizedBox(height: 3),
-                  _drawItemValue(Icons.view_stream_outlined, 'Gerenda', item['gerenda_id'], isCompleted: true),
-                ],
-              ],
-            )),
-            const SizedBox(width: 10),
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.end,
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.center,
               children: [
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+                  width:   72,
+                  height:  58,
+                  padding: const EdgeInsets.all(4),
                   decoration: BoxDecoration(
-                    color:        isCompleted ? const Color(0xFF33AA55) : const Color(0xFFF0F0F0),
-                    borderRadius: BorderRadius.circular(8),
+                    color:        const Color(0xFFFFFFFF),
+                    borderRadius: BorderRadius.circular(7),
+                    border: Border.all(
+                      color: isCompleted ? const Color(0x5533AA55) : const Color(0x22000000),
+                    ),
                   ),
-                  child: Text(
-                    '${item['mennyiseg'] ?? '-'} db',
-                    style: TextStyle(
-                      fontSize:   15,
-                      fontWeight: FontWeight.bold,
-                      color:      isCompleted ? const Color(0xFFFFFFFF) : const Color(0xFF333333),
+                  child: Image.network(
+                    item['picture']?.toString() ?? '',
+                    fit: BoxFit.contain,
+                    errorBuilder: (context, error, stackTrace) => const Icon(
+                      Icons.image_not_supported_outlined,
+                      size:  30,
+                      color: Color(0xFF999999),
                     ),
                   ),
                 ),
-                if(isCompleted) ...[
-                  const SizedBox(height: 6),
-                  const Icon(
-                    Icons.check_circle,
-                    color: Color(0xFF229944),
-                    size:  24,
-                  ),
-                ],
+                const SizedBox(width: 12),
+                Expanded(child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      _displayValue(item['cikkszam']),
+                      style: TextStyle(
+                        fontSize:   17,
+                        fontWeight: FontWeight.bold,
+                        color:      isCompleted ? const Color(0xFF228844) : const Color(0xFF333333),
+                      ),
+                    ),
+                    const SizedBox(height: 5),
+                    _drawItemValue(Icons.layers_outlined, 'Réteg', item['reteg'], isCompleted: isCompleted),
+                    const SizedBox(height: 3),
+                    _drawItemValue(Icons.palette_outlined, 'Szín', item['szin'], isCompleted: isCompleted),
+                    if(isCompleted) ...[
+                      const SizedBox(height: 3),
+                      _drawItemValue(Icons.view_stream_outlined, 'Gerenda', item['gerenda_id'], isCompleted: true),
+                    ],
+                  ],
+                )),
+                const SizedBox(width: 10),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+                      decoration: BoxDecoration(
+                        color:        isCompleted ? const Color(0xFF33AA55) : const Color(0xFFF0F0F0),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Text(
+                        '${item['mennyiseg'] ?? '-'} db',
+                        style: TextStyle(
+                          fontSize:   15,
+                          fontWeight: FontWeight.bold,
+                          color:      isCompleted ? const Color(0xFFFFFFFF) : const Color(0xFF333333),
+                        ),
+                      ),
+                    ),
+                    if(isCompleted) ...[
+                      const SizedBox(height: 6),
+                      const Icon(
+                        Icons.check_circle,
+                        color: Color(0xFF229944),
+                        size:  24,
+                      ),
+                    ],
+                  ],
+                ),
               ],
             ),
-          ],
+          ),
         ),
-      ),
+        if(isCompleted)
+          Positioned(
+            top:  -14,
+            left: -14,
+            child: Material(
+              color:     const Color(0xFFD32F2F),
+              elevation: 7,
+              shape:     const CircleBorder(),
+              child: InkWell(
+                onTap: () => undoRecord(item),
+                customBorder: const CircleBorder(),
+                child: const SizedBox(
+                  width:  34,
+                  height: 34,
+                  child: Icon(
+                    Icons.close,
+                    color: Color(0xFFFFFFFF),
+                    size:  22,
+                  ),
+                ),
+              ),
+            ),
+          ),
+      ],
     );
   }
 
@@ -398,6 +426,39 @@ class RouteFestesreFelrakasState extends State<RouteFestesreFelrakas> {//-------
     }
   }
 
+  Future<void> undoRecord(dynamic item) async{
+    if(!_isCompleted(item)) return;
+    if(!await Global.yesNoDialog(
+      context,
+      title:    '⚠️ Visszavonás',
+      content:  'Visszavonja a tétel rögzítését?\n${item['cikkszam']}',
+      options:  const ['Igen', 'Mégsem'],
+    )) return;
+    int itemIndex = rawData.indexWhere((rawItem) => identical(rawItem, item));
+    if(itemIndex < 0) return;
+    int cancelledAmount = int.tryParse(item['mennyiseg']?.toString() ?? '') ?? 0;
+    int remainingIndex = rawData.indexWhere((rawItem) =>
+      !identical(rawItem, item) &&
+      !_isCompleted(rawItem) &&
+      _sameRecord(rawItem, item)
+    );
+    setState((){
+      if(remainingIndex >= 0){
+        int remainingAmount = int.tryParse(rawData[remainingIndex]['mennyiseg']?.toString() ?? '') ?? 0;
+        rawData[remainingIndex]['mennyiseg'] = remainingAmount + cancelledAmount;
+        rawData.removeAt(itemIndex);
+      }
+      else{
+        Map<String, dynamic> restoredItem = Map<String, dynamic>.from(item);
+        restoredItem.remove('gerenda_id');
+        restoredItem.remove('ok');
+        restoredItem.remove('time_stamp');
+        restoredItem.remove('user_id');
+        rawData[itemIndex] = restoredItem;
+      }
+    });
+  }
+
   Future<void> handlePop() async{
     if(await Global.yesNoDialog(
       context,
@@ -415,6 +476,15 @@ class RouteFestesreFelrakasState extends State<RouteFestesreFelrakas> {//-------
   }
 
   // ---------- < Methods [2] > --------- ---------- ---------- ---------- ---------- ---------- ---------- ---------- ---------- ---------- ---------- //
+  bool _sameRecord(dynamic a, dynamic b){
+    const ignoredKeys = {'mennyiseg', 'gerenda_id', 'ok', 'time_stamp', 'user_id'};
+    for(dynamic key in {...a.keys, ...b.keys}){
+      if(ignoredKeys.contains(key)) continue;
+      if(a[key]?.toString() != b[key]?.toString()) return false;
+    }
+    return true;
+  }
+  
   Future<bool> finalCheck() async{
     if(rawData.any((item) => !_isCompleted(item))) return false;
     await DataManager(

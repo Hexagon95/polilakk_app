@@ -30,7 +30,6 @@ class RouteElokezelesState extends State<RouteElokezeles> {//---------- --------
   int? selectedAmount;
   String? basketID;
   String? selectedPackageID;
-  final Map<String, GlobalKey> packageKeys = {};
 
   // ---------- [💎 complex variables] -- ---------- ---------- ---------- ---------- ---------- ---------- ---------- ---------- ---------- ---------- //
   int? get index => _index;
@@ -367,7 +366,6 @@ class RouteElokezelesState extends State<RouteElokezeles> {//---------- --------
     bool isCompleted =  items.every((item) => _setRecordStatus(item) != RStatus.default0);
     bool isActive =     !isCompleted && orderID == activeOrder && packageID == activePackage;
     return AnimatedContainer(
-      key:        _packageKey(orderID, packageID),
       duration:   const Duration(milliseconds: 250),
       width:      double.infinity,
       padding:    const EdgeInsets.all(10),
@@ -736,24 +734,6 @@ class RouteElokezelesState extends State<RouteElokezeles> {//---------- --------
   }
 
 
-  GlobalKey _packageKey(String orderID, String packageID) =>
-      packageKeys.putIfAbsent('$orderID|$packageID', () => GlobalKey());
-
-
-  void _scrollToPackage(String orderID, String packageID){
-    WidgetsBinding.instance.addPostFrameCallback((_){
-      BuildContext? packageContext = packageKeys['$orderID|$packageID']?.currentContext;
-      if(packageContext == null) return;
-      Scrollable.ensureVisible(
-        packageContext,
-        duration:  const Duration(milliseconds: 500),
-        curve:     Curves.easeInOut,
-        alignment: 0.15,
-      );
-    });
-  }
-
-
   String _displayValue(dynamic value){
     if(value == null || value.toString().trim().isEmpty){
       return '-';
@@ -1016,7 +996,6 @@ class RouteElokezelesState extends State<RouteElokezeles> {//---------- --------
               basketID          = null;
               _work             = Work.itemSelection;
             });}
-            _scrollToPackage(activeOrder!, scanData);
           }
           else{
             AudioPlayer().play(AssetSource('sounds/error.mp3'));
