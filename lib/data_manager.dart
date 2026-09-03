@@ -12,7 +12,7 @@ class DataManager{
   void get bookMarks {beginCall;}
 
   // ---------- [⚡️ static variables] --- ---------- ---------- ---------- ---------- ---------- ---------- ---------- ---------- ---------- ---------- //
-  static const String thisVersion =     '0.1e';
+  static const String thisVersion =     '0.1f1';
   static int verzioTest =               0;            // <--- Anything other than 0 will draw "[Teszt #]" at the LogIn screen.
   static String actualVersion =         thisVersion;
   static String customer =              'Koat2';
@@ -82,6 +82,16 @@ class DataManager{
           'parameter':  jsonEncode(input['data'])
         };
         Uri uriUrl =              Uri.parse('${urlPath}finish_elokezeles.php');
+        http.Response response =  await http.post(uriUrl, body: json.encode(queryParameters), headers: headers);
+        data[appAction] =         await jsonDecode(response.body);
+        break;
+
+      case AppAction.callFinishFestesreFelrakas:
+        var queryParameters = {
+          'customer':   customer,
+          'parameter':  jsonEncode(input['data'])
+        };
+        Uri uriUrl =              Uri.parse('${urlPath}finish_festesre_felrakas.php');
         http.Response response =  await http.post(uriUrl, body: json.encode(queryParameters), headers: headers);
         data[appAction] =         await jsonDecode(response.body);
         break;

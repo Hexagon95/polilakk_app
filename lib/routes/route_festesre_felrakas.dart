@@ -365,6 +365,7 @@ class RouteFestesreFelrakasState extends State<RouteFestesreFelrakas> {//-------
     if(selectedIndex < 0) return;
     if(!mounted) return;
     setState(() => stamp(selectedIndex, amount, beamID));
+    await finalCheck();
   }
 
   void stamp(int index, int amount, int beamID){
@@ -398,7 +399,35 @@ class RouteFestesreFelrakasState extends State<RouteFestesreFelrakas> {//-------
   }
 
   Future<void> handlePop() async{
+    if(await Global.yesNoDialog(
+      context,
+      title:    '⚠️ Kilépés',
+      content:  'Félbe kívánja szakítani a Festésre felrakást?',
+      options:  const ['Igen', 'Mégsem'],
+    )){
+      await DataManager(
+        appAction: AppAction.callFinishFestesreFelrakas,
+        input:     {'data': rawData},
+      ).beginCall;
+      Global.routeBack;
+      if(mounted) Navigator.pop(context);
+    }
+  }
+
+  // ---------- < Methods [2] > --------- ---------- ---------- ---------- ---------- ---------- ---------- ---------- ---------- ---------- ---------- //
+  Future<bool> finalCheck() async{
+    if(rawData.any((item) => !_isCompleted(item))) return false;
+    await DataManager(
+      appAction: AppAction.callFinishFestesreFelrakas,
+      input:     {'data': rawData},
+    ).beginCall;
+    await Global.showAlertDialog(
+      context,
+      title:   'ℹ️ Festésre felrakás befejezve!',
+      content: 'Nincs több teendő!',
+    );
     Global.routeBack;
     if(mounted) Navigator.pop(context);
+    return true;
   }
 }

@@ -10,7 +10,7 @@ import 'src/scanner_datawedge.dart';
 enum AppAction{
   routeLogIn, routeMenu, routeElokezeles, routeFestesreFelrakas,
   callLogInSecondTime, callElokezeles, callTermelesKosar, callFestesreFelrakas,
-  callFinishElokezeles, callFinishTermelsKosar,
+  callFinishElokezeles, callFinishTermelsKosar, callFinishFestesreFelrakas,
   default0, 
 }
 enum ButtonState{hidden, loading, disabled, error, default0}
