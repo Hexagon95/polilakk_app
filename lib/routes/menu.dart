@@ -1,5 +1,6 @@
 import 'package:polilakk_app/routes/route_festesre_felrakas.dart';
 import 'package:polilakk_app/routes/route_elokezeles.dart';
+import 'package:polilakk_app/routes/route_porfestes.dart';
 import 'package:polilakk_app/data_manager.dart';
 import 'package:polilakk_app/global.dart';
 import 'package:flutter/material.dart';
@@ -81,6 +82,7 @@ class MenuState extends State<MenuFrame> {//---------- ---------- ---------- ---
       onPressed: switch(text) {
         'Előkezelés' =>         buttonElokezelesPressed,
         'Festésre felrakás' =>  buttonFestesreFelrakasPressed,
+        'Porfestés' =>          buttonPorfestesPressed,
         _            =>         null,
       },
       style:      ElevatedButton.styleFrom(
@@ -104,8 +106,15 @@ class MenuState extends State<MenuFrame> {//---------- ---------- ---------- ---
   }
 
   Future<void> buttonFestesreFelrakasPressed() async{
-    RouteFestesreFelrakasState.rawData = await DataManager(appAction: AppAction.callFestesreFelrakas).beginCall;
+    RouteFestesreFelrakasState.rawData =      await DataManager(appAction: AppAction.callFestesreFelrakas).beginCall;
+    RouteFestesreFelrakasState.dataGerenda =  await DataManager(appAction: AppAction.callGerenda).beginCall;
     Global.routeNext =  AppAction.routeFestesreFelrakas;
     await Navigator.pushNamed(context, '/menu/festesre_felrakas');
+  }
+
+  Future<void> buttonPorfestesPressed() async{
+    RoutePorfestesState.rawData = await DataManager(appAction: AppAction.callPorfestes).beginCall;
+    Global.routeNext =            AppAction.routePorfestes;
+    await Navigator.pushNamed(context, '/menu/porfestes');
   }
 }

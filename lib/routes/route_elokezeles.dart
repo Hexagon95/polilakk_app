@@ -23,6 +23,7 @@ class RouteElokezelesState extends State<RouteElokezeles> {//---------- --------
 
   // ---------- [🌸 simple variables] --- ---------- ---------- ---------- ---------- ---------- ---------- ---------- ---------- ---------- ---------- //
   bool scanOngoing = false;
+  List<dynamic>? rawDataBeforeOverride;
   ValueNotifier<ScannerDatas>? scannerDatas;
   ScannerDatawedge? scannerDatawedge;
   late double _contentWidth;
@@ -31,6 +32,7 @@ class RouteElokezelesState extends State<RouteElokezeles> {//---------- --------
   String? basketID;
   String? selectedPackageID;
   final Map<String, GlobalKey> packageKeys = {};
+  final ScrollController contentScrollController = ScrollController();
 
   // ---------- [💎 complex variables] -- ---------- ---------- ---------- ---------- ---------- ---------- ---------- ---------- ---------- ---------- //
   int? get index => _index;
@@ -118,7 +120,8 @@ class RouteElokezelesState extends State<RouteElokezeles> {//---------- --------
         style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
       ))
     : ListView(
-        padding: const EdgeInsets.fromLTRB(6, 85, 6, 15),
+        controller: contentScrollController,
+        padding:    const EdgeInsets.fromLTRB(6, 85, 6, 15),
         children: [
           for(final order in groupedData.entries) ...[
             _drawOrderCard(
@@ -302,6 +305,13 @@ class RouteElokezelesState extends State<RouteElokezeles> {//---------- --------
         )),
       ]),
       const SizedBox(height: 8),
+      _drawHeaderValue(
+        Icons.business_outlined,
+        'Megrendelő',
+        _displayValue(item['partner_nev']),
+        isCompleted: isCompleted,
+      ),
+      const SizedBox(height: 6),
       _drawHeaderValue(
         Icons.palette_outlined,
         'Szín',
@@ -731,6 +741,7 @@ class RouteElokezelesState extends State<RouteElokezeles> {//---------- --------
     scannerDatas?.removeListener(_triggerScan);
     scannerDatawedge?.dispose();
     scannerDatas?.dispose();
+    contentScrollController.dispose();
 
     super.dispose();
   }
@@ -739,17 +750,30 @@ class RouteElokezelesState extends State<RouteElokezeles> {//---------- --------
   GlobalKey _packageKey(String orderID, String packageID) =>
       packageKeys.putIfAbsent('$orderID|$packageID', () => GlobalKey());
 
+  void _scrollToTop(){
+    WidgetsBinding.instance.addPostFrameCallback((_){
+      if(!contentScrollController.hasClients) return;
+      contentScrollController.animateTo(
+        0,
+        duration: const Duration(milliseconds: 500),
+        curve:    Curves.easeInOut,
+      );
+    });
+  }
+
 
   void _scrollToPackage(String orderID, String packageID){
     WidgetsBinding.instance.addPostFrameCallback((_){
-      BuildContext? packageContext = packageKeys['$orderID|$packageID']?.currentContext;
-      if(packageContext == null) return;
-      Scrollable.ensureVisible(
-        packageContext,
-        duration:  const Duration(milliseconds: 500),
-        curve:     Curves.easeInOut,
-        alignment: 0.15,
-      );
+      WidgetsBinding.instance.addPostFrameCallback((_){
+        BuildContext? packageContext = packageKeys['$orderID|$packageID']?.currentContext;
+        if(packageContext == null) return;
+        Scrollable.ensureVisible(
+          packageContext,
+          duration:  const Duration(milliseconds: 500),
+          curve:     Curves.easeInOut,
+          alignment: 0.15,
+        );
+      });
     });
   }
 
@@ -811,6 +835,7 @@ class RouteElokezelesState extends State<RouteElokezeles> {//---------- --------
       if(selectedIndex < 0) return;
       if(!mounted) return;
       if(amount == -1){
+        rawDataBeforeOverride = null;
         rawData[selectedIndex] = {
           ...Map<String, dynamic>.from(item),
           'ok':         0,
@@ -861,6 +886,7 @@ class RouteElokezelesState extends State<RouteElokezeles> {//---------- --------
 
   Future<void> _buttonFinishBasketPressed() async{
     try{
+      String? orderBeforeRefresh = activeOrder;
       await DataManager(
         appAction: AppAction.callFinishElokezeles,
         input:     {'data': completedData},
@@ -893,7 +919,8 @@ class RouteElokezelesState extends State<RouteElokezeles> {//---------- --------
           ),
         },
       );
-      if(result != null && result.isNotEmpty){
+      if(result == null) return;
+      if(result.isNotEmpty){
         List<dynamic> message = [];
         for(dynamic item in result){
           message.add(await DataManager(appAction: AppAction.callFinishTermelsKosar, input: {
@@ -908,7 +935,16 @@ class RouteElokezelesState extends State<RouteElokezeles> {//---------- --------
         );
       }
       rawData = await DataManager(appAction: AppAction.callElokezeles).beginCall;
-      setState((){});
+      if(orderBeforeRefresh != null) _prioritizeOrder(orderBeforeRefresh);
+      rawDataBeforeOverride = null;
+      if(!mounted) return;
+      setState((){
+        _index            = null;
+        selectedAmount    = null;
+        basketID          = null;
+        selectedPackageID = null;
+        _work             = rawData.isEmpty ? Work.default0 : Work.packageIdScan;
+      });
     }
     catch(e){
       if(kDebugMode) print(e.toString());
@@ -975,6 +1011,21 @@ class RouteElokezelesState extends State<RouteElokezeles> {//---------- --------
   }
 
   Future<void> handlePop() async{
+    if(work != Work.packageIdScan){
+      if(!mounted) return;
+      setState((){
+        if(rawDataBeforeOverride != null){
+          rawData = rawDataBeforeOverride!;
+          rawDataBeforeOverride = null;
+        }
+        _index            = null;
+        selectedAmount    = null;
+        basketID          = null;
+        selectedPackageID = null;
+        _work             = Work.packageIdScan;
+      });
+      return;
+    }
     if(await Global.yesNoDialog(
       context,
       title:    '⚠️ Kilépés',
@@ -1007,9 +1058,10 @@ class RouteElokezelesState extends State<RouteElokezeles> {//---------- --------
             packages.containsKey(scanData) &&
             packages[scanData]!.any((item) => _setRecordStatus(item) == RStatus.default0)
           ;
+          bool packageExists = rawData.any((item) => item['package_id']?.toString() == scanData);
           if(validPackage){
             AudioPlayer().play(AssetSource('sounds/okay.mp3'));
-            if(mounted) {setState((){
+            if(mounted){setState((){
               selectedPackageID = scanData;
               _index            = null;
               selectedAmount    = null;
@@ -1018,12 +1070,58 @@ class RouteElokezelesState extends State<RouteElokezeles> {//---------- --------
             });}
             _scrollToPackage(activeOrder!, scanData);
           }
-          else{
+          else if(!packageExists){
             AudioPlayer().play(AssetSource('sounds/error.mp3'));
             await Global.showAlertDialog(context,
-              title:   '⚠️ Helytelen kód!',
-              content: 'Ez a csomag nem választható az aktuális Szín alatt!',
+              title:   '⚠️ Helytelen Kód!',
+              content: '❌ A beolvasott kód nem megfelelő csomag azonosító!'
             );
+          }
+          else{
+            AudioPlayer().play(AssetSource('sounds/error.mp3'));
+            String resultHelytelenKod = await Global.showAlertDialog(context,
+              title:            '⚠️ Helytelen kód!',
+              content:          'Ez a csomag nem választható az aktuális Szín alatt!',
+              additionalButton: '🔑 Mesterkód'
+            );
+            if(resultHelytelenKod == '🔑 Mesterkód') {String? resultMasterKod; do{
+              resultMasterKod = await Global.showBarcodeScanDialog(context,
+                title:    '🔑 Mesterkód Megadása!',
+                content:  'ℹ️ Szkennelje be a mesterkódot a folytatáshoz!'
+              );
+              _restoreScanner();
+              if(resultMasterKod == null) break;
+              if(resultMasterKod != DataManager.mastercode){
+                AudioPlayer().play(AssetSource('sounds/error.mp3'));
+                await Global.showAlertDialog(context,
+                  title:    '⚠️ Helyetelen kód!',
+                  content:  'A megadott kód helytelen!'
+                );
+              }
+              if(resultMasterKod == DataManager.mastercode){
+                rawDataBeforeOverride = List<dynamic>.from(rawData);
+                String? targetOrderID = _prioritizePackage(scanData);
+                if(targetOrderID == null){
+                  rawDataBeforeOverride = null;
+                  AudioPlayer().play(AssetSource('sounds/error.mp3'));
+                  await Global.showAlertDialog(context,
+                    title:   '⚠️ Csomag nem található!',
+                    content: 'A beolvasott csomag nem található a befejezetlen tételek között!'
+                  );
+                  break;
+                }
+                AudioPlayer().play(AssetSource('sounds/okay.mp3'));
+                if(mounted){setState((){
+                  selectedPackageID = scanData;
+                  _index            = null; 
+                  selectedAmount    = null;
+                  basketID          = null;
+                  _work             = Work.itemSelection;
+                });}
+                _scrollToTop();
+                break;
+              }
+            } while(true);}
           }
           break;
 
@@ -1060,6 +1158,7 @@ class RouteElokezelesState extends State<RouteElokezeles> {//---------- --------
       int itemIndex = rawData.indexWhere((rawItem) => identical(rawItem, item));
       if(itemIndex < 0) return;
       int cancelledAmount = int.tryParse(item['mennyiseg']?.toString() ?? '') ?? 0;
+      String packageID = item['package_id']?.toString() ?? '';
       int remainingIndex = rawData.indexWhere((rawItem) =>
         !identical(rawItem, item) &&
         _setRecordStatus(rawItem) == RStatus.default0 &&
@@ -1082,8 +1181,8 @@ class RouteElokezelesState extends State<RouteElokezeles> {//---------- --------
         _index = null;
         selectedAmount = null;
         basketID = null;
-        selectedPackageID = null;
-        _work = Work.packageIdScan;
+        selectedPackageID = packageID;
+        _work = Work.itemSelection;
       });
     }
     finally{
@@ -1095,11 +1194,11 @@ class RouteElokezelesState extends State<RouteElokezeles> {//---------- --------
   void stamp(){
     if(index == null || selectedAmount == null) return;
     dynamic item = rawData[index!];
-    int originalAmount =
-        int.tryParse(item['mennyiseg']?.toString() ?? '') ?? 0;
+    int originalAmount = int.tryParse(item['mennyiseg']?.toString() ?? '') ?? 0;
     int amount = selectedAmount!;
     if(originalAmount <= 0) return;
     if(amount <= 0 || amount > originalAmount) return;
+    rawDataBeforeOverride = null;
     Map<String, dynamic> completedItem = {
       ...Map<String, dynamic>.from(item),
       'mennyiseg':  amount,
@@ -1127,6 +1226,58 @@ class RouteElokezelesState extends State<RouteElokezeles> {//---------- --------
       rawData[index!] = completedItem;
     }
     basketID = null;
+  }
+
+  void _restoreScanner(){
+    scannerDatawedge?.dispose();
+    scannerDatawedge = ScannerDatawedge(
+      scannerDatas: scannerDatas!,
+      profileName:  'PolilakkItemFrame',
+    );
+  }
+
+  void _prioritizeOrder(String orderID){
+    bool targetExists = rawData.any((item) => _orderID(item) == orderID && _setRecordStatus(item) == RStatus.default0);
+    if(!targetExists) return;
+    List<String> orderIDs = [];
+    for(dynamic item in rawData){
+      String currentOrderID = _orderID(item);
+      if(!orderIDs.contains(currentOrderID)) orderIDs.add(currentOrderID);
+    }
+    List<String> completedOrders = orderIDs.where((currentOrderID) =>
+      rawData.where((item) => _orderID(item) == currentOrderID).every((item) => _setRecordStatus(item) != RStatus.default0)
+    ).toList();
+    List<String> unfinishedOrders = orderIDs.where((currentOrderID) =>
+      currentOrderID != orderID &&
+      rawData.where((item) => _orderID(item) == currentOrderID).any((item) => _setRecordStatus(item) == RStatus.default0)
+    ).toList();
+    rawData = [
+      for(String currentOrderID in [...completedOrders, orderID, ...unfinishedOrders])
+        ...rawData.where((item) => _orderID(item) == currentOrderID)
+    ];
+  }
+
+  String? _prioritizePackage(String packageID){
+    int targetIndex = rawData.indexWhere((item) => item['package_id']?.toString() == packageID && _setRecordStatus(item) == RStatus.default0);
+    if(targetIndex < 0) return null;
+    String targetOrderID = _orderID(rawData[targetIndex]);
+    List<String> orderIDs = [];
+    for(dynamic item in rawData){
+      String orderID = _orderID(item);
+      if(!orderIDs.contains(orderID)) orderIDs.add(orderID);
+    }
+    List<String> completedOrders = orderIDs.where((orderID) =>
+      rawData.where((item) => _orderID(item) == orderID).every((item) => _setRecordStatus(item) != RStatus.default0)
+    ).toList();
+    List<String> unfinishedOrders = orderIDs.where((orderID) =>
+      orderID != targetOrderID &&
+      rawData.where((item) => _orderID(item) == orderID).any((item) => _setRecordStatus(item) == RStatus.default0)
+    ).toList();
+    rawData = [
+      for(String orderID in [targetOrderID, ...completedOrders, ...unfinishedOrders])
+        ...rawData.where((item) => _orderID(item) == orderID)
+    ];
+    return targetOrderID;
   }
 
   bool _sameRecord(dynamic a, dynamic b){

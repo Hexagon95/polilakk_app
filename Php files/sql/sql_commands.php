@@ -6,8 +6,12 @@ class SqlCommand{
     // ---------- <SQL Scripts> ------- ---------- ---------- ---------- ---------- ---------- ---------- ----------
     public function select_termelesFolyamat1()	        {return "SELECT * FROM [dbo].[Termeles_folyamat1] ()";}
     public function select_termelesFolyamat2()	        {return "SELECT * FROM [dbo].[Termeles_folyamat2] ()";}
+    public function select_termelesFolyamat3()	        {return "SELECT * FROM [dbo].[Termeles_folyamat3] ()";}
+    public function select_termelesFolyamat2Gerenda()   {return "SELECT b FROM [dbo].[Termeles_folyamat2_gerenda] ()";}
     public function select_termelesKosar()	            {return "SELECT b FROM [dbo].[Termeles_kosar] ()";}
     public function exec_termelesFolyamat1Felvitele()   {return "EXEC [dbo].[Termeles_folyamat1_felvitele] :parameter, :output";}
     public function exec_termelesFolyamat2Felvitele()   {return "EXEC [dbo].[Termeles_folyamat2_felvitele] :parameter, :output";}
+    public function exec_termelesFolyamat3Felvitele()   {return "EXEC [dbo].[Termeles_folyamat3_felvitele] :parameter, :output";}
     public function exec_termelesKosarZaras()           {return "EXEC [dbo].[Termeles_kosar_zaras] :id, :user_id, :output";}
+    public function exec_termeles2GerendaZaras()        {return "EXEC [dbo].[Termeles2_gerenda_zaras] :id, :user_id, :output";}
 }

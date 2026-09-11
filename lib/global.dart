@@ -8,9 +8,9 @@ import 'package:flutter/services.dart';
 import 'src/scanner_datawedge.dart';
 // ---------- < Enums > --- ---------- ---------- ---------- ----------
 enum AppAction{
-  routeLogIn, routeMenu, routeElokezeles, routeFestesreFelrakas,
-  callLogInSecondTime, callElokezeles, callTermelesKosar, callFestesreFelrakas,
-  callFinishElokezeles, callFinishTermelsKosar, callFinishFestesreFelrakas,
+  routeLogIn, routeMenu, routeElokezeles, routeFestesreFelrakas, routePorfestes,
+  callLogInSecondTime, callElokezeles, callTermelesKosar, callFestesreFelrakas, callMastercode, callGerenda, callPorfestes,
+  callFinishElokezeles, callFinishTermelsKosar, callFinishFestesreFelrakas, callFinishGerenda, callFinishPorfestes,
   default0, 
 }
 enum ButtonState{hidden, loading, disabled, error, default0}
@@ -25,10 +25,11 @@ class Global{
   static set routeNext (AppAction value){
     int check(int i)  {while(_routes.length > i){_routes.removeLast();} while(_routes.length <= i){_routes.add(AppAction.default0);} return i; }
     switch (value) {
-      case AppAction.routeLogIn:                       _routes[check(0)] =   value;  break;
-      case AppAction.routeMenu:                        _routes[check(1)] =   value;  break;
-      case AppAction.routeElokezeles:                  _routes[check(2)] =   value;  break;
-      case AppAction.routeFestesreFelrakas:            _routes[check(2)] =   value;  break;
+      case AppAction.routeLogIn:            _routes[check(0)] =   value;  break;
+      case AppAction.routeMenu:             _routes[check(1)] =   value;  break;
+      case AppAction.routeElokezeles:       _routes[check(2)] =   value;  break;
+      case AppAction.routeFestesreFelrakas: _routes[check(2)] =   value;  break;
+      case AppAction.routePorfestes:        _routes[check(2)] =   value;  break;
       default:  throw Exception('Default rout has been thrown!!!!');
     }
     _printRoutes;
@@ -39,24 +40,29 @@ class Global{
   static const String sqlCreateTableIdentity = "CREATE TABLE identityTable(id INTEGER PRIMARY KEY, identity TEXT)";
   
   // ---------- < Global Dialogs > ----- ---------- ---------- ---------- ---------- ---------- ---------- ---------- ---------- ---------- ---------- ---------- //
-  static Future showAlertDialog(BuildContext context, {String title = 'Figyelmeztetés', required String content}) async{
-    
+  static Future<String> showAlertDialog(BuildContext context, {String title = 'Figyelmeztetés', required String content, String? additionalButton}) async{
     Widget okButton = TextButton(
       child: const Text('Ok'),
-      onPressed: () => Navigator.pop(context, true)
+      onPressed: () => Navigator.pop(context, 'Ok')
     );
-
+    Widget? specialButton = additionalButton == null ? null : TextButton(
+      child: Text(additionalButton),
+      onPressed: () => Navigator.pop(context, additionalButton)
+    );
     AlertDialog infoRegistry = AlertDialog(
-      title:    Text(title,   style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold)),
-      content:  Text(content, style: const TextStyle(fontSize: 12)),
-      actions:  [okButton]
-    ); 
-
-    return await showDialog(
+      title:   Text(title, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold)),
+      content: Text(content, style: const TextStyle(fontSize: 12)),
+      actions: [
+        if(specialButton != null) specialButton,
+        if(specialButton != null) const Spacer(),
+        okButton
+      ]
+    );
+    return await showDialog<String>(
       context: context,
       builder: (BuildContext context) => infoRegistry,
       barrierDismissible: false
-    );
+    ) ?? 'Ok';
   }
 
   static Future<bool> yesNoDialog(BuildContext context, {String title = '', String content = '', List<String> options = const ['Igen', 'Nem']}) async{
@@ -351,39 +357,7 @@ class Global{
         );
       },
     );
-  }
-
-  /*static Future<int?> integerDialog(BuildContext context, {String title = '', String content = ''}) async{
-    int? varInt;
-    BoxDecoration customBoxDecoration = BoxDecoration(
-      border:       Border.all(color: const Color.fromARGB(130, 184, 184, 184), width: 1),
-      color:        Colors.white,
-      borderRadius: const BorderRadius.all(Radius.circular(8))
-    );
-    Widget okButton = TextButton(child: const Text('Ok'), onPressed: () => Navigator.pop(context, varInt));
-    Widget cancel =   TextButton(child: const Text('Mégsem'), onPressed: () => Navigator.pop(context, null));
-    AlertDialog infoRegistry = AlertDialog(
-      title:    Text(title, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold)),
-      content:  Container(height: 55, decoration: customBoxDecoration, child: TextFormField(
-        autofocus:       true,
-        onChanged:       (value) => varInt = int.tryParse(value),
-        inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-        decoration:      InputDecoration(
-          contentPadding: const EdgeInsets.all(10),
-          labelText:      content,
-          border:         InputBorder.none,
-        ),
-        style:        const TextStyle(color: Color.fromARGB(255, 51, 51, 51)),
-        keyboardType: TextInputType.number,
-      )),
-      actions: [okButton, cancel]
-    );
-    return await showDialog(
-      context:            context,
-      builder:            (BuildContext context) => infoRegistry,
-      barrierDismissible: false
-    );
-  }*/
+  }  
 
   static Future<String?> plateNuberDialog(BuildContext context, {String title = '', String content = ''}) async{
     // --------- < Variables > ---------- ---------- ---------- ---------- ---------- ---------- ---------- ---------- ---------- //
@@ -778,120 +752,78 @@ class Global{
     );
   }
   
-  static Future<String?> showBarcodeScanDialog(BuildContext context) async{
-    final AudioPlayer player = AudioPlayer();
-    final TextEditingController manualController = TextEditingController();
-    bool manualMode = false;
+ static Future<String?> showBarcodeScanDialog(
+    BuildContext context, {
+    required String title,
+    required String content,
+  }) async{
     BuildContext? activeDialogContext;
-    final tempScannerDatawedge = ScannerDatawedge(
-      scannerDatas: ValueNotifier(ScannerDatas(scanData: '')),
-      profileName: 'BarcodeDialog',
+    final ValueNotifier<ScannerDatas> scannerDatas = ValueNotifier(ScannerDatas(scanData: ''));
+    final ScannerDatawedge scannerDatawedge = ScannerDatawedge(
+      scannerDatas: scannerDatas,
+      profileName:  'Dialog',
     );
-    listener(){
-      if(manualMode) return;
-      final value = tempScannerDatawedge.scannerDatas.value.scanData.trim();
+    void listener(){
+      final String value = scannerDatas.value.scanData.trim();
       if(value.isNotEmpty && activeDialogContext != null){
-        player.play(AssetSource('sounds/okay.mp3'));
+        AudioPlayer().play(AssetSource('sounds/okay.mp3'));
         Navigator.of(activeDialogContext!).pop(value);
       }
     }
-    tempScannerDatawedge.scannerDatas.addListener(listener);
-    final result = await showDialog<String>(
+    scannerDatas.addListener(listener);
+    final String? result = await showDialog<String>(
       context: context,
       barrierDismissible: false,
       builder: (dialogContext){
         activeDialogContext = dialogContext;
-        return StatefulBuilder(
-          builder: (dialogContext, setDialogState){
-            return AlertDialog(
-              titlePadding:   const EdgeInsets.all(16),
-              contentPadding: const EdgeInsets.fromLTRB(24, 16, 24, 8),
-              backgroundColor: Colors.white,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-              title: Row(children: [
-                Icon(
-                  manualMode? Icons.keyboard : Icons.qr_code_scanner,
-                  color: Global.getColorOfButton(ButtonState.default0)
-                ),
-                const SizedBox(width: 10),
-                Expanded(child: Text(
-                  manualMode? 'Vonalkód kézi megadása' : 'Vonalkód leolvasása',
-                  style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                )),
-              ]),
-              content: Column(mainAxisSize: MainAxisSize.min, children: [
-                if(!manualMode) ...[
-                  Icon(
-                    Icons.barcode_reader,
-                    size: 100,
-                    color: Global.getColorOfButton(ButtonState.default0),
-                  ),
-                  const SizedBox(height: 20),
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-                    decoration: BoxDecoration(
-                      color: Colors.grey.withOpacity(0.2),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: const Text(
-                      'Kérem olvasson le egy terméket eszközével',
-                      style: TextStyle(fontSize: 14, color: Colors.black),
-                      textAlign: TextAlign.center,
-                    ),
-                  ),
-                ]
-                else ...[
-                  TextFormField(
-                    controller:       manualController,
-                    autofocus:        true,
-                    keyboardType:     TextInputType.number,
-                    inputFormatters:  [FilteringTextInputFormatter.digitsOnly],
-                    decoration: const InputDecoration(
-                      labelText:  'Vonalkód',
-                      border:     OutlineInputBorder(),
-                      prefixIcon: Icon(Icons.keyboard),
-                    ),
-                    onFieldSubmitted: (value){
-                      final String manualValue = value.trim();
-                      if(manualValue.isNotEmpty) Navigator.of(dialogContext).pop(manualValue);
-                    },
-                  ),
-                ]
-              ]),
-              actionsAlignment: MainAxisAlignment.spaceBetween,
-              actions: [
-                IconButton(
-                  tooltip: manualMode? 'Szkenner' : 'Kézi megadás',
-                  onPressed: (){
-                    FocusManager.instance.primaryFocus?.unfocus();
-                    setDialogState((){
-                      manualMode = !manualMode;
-                      manualController.clear();
-                    });
-                  },
-                  icon: Icon(manualMode? Icons.qr_code_scanner : Icons.keyboard),
-                ),
-                Row(mainAxisSize: MainAxisSize.min, children: [
-                  if(manualMode) TextButton(
-                    onPressed: (){
-                      final String manualValue = manualController.text.trim();
-                      if(manualValue.isNotEmpty) Navigator.of(dialogContext).pop(manualValue);
-                    },
-                    child: const Text('Ok'),
-                  ),
-                  TextButton(
-                    onPressed: () => Navigator.of(dialogContext).pop(null),
-                    child: const Text('Mégse'),
-                  ),
-                ])
-              ],
-            );
-          }
+        return AlertDialog(
+          titlePadding:    const EdgeInsets.all(16),
+          contentPadding:  const EdgeInsets.fromLTRB(24, 16, 24, 8),
+          backgroundColor: Colors.white,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          title: Row(children: [
+            Icon(
+              Icons.qr_code_scanner,
+              color: Global.getColorOfButton(ButtonState.default0)
+            ),
+            const SizedBox(width: 10),
+            Expanded(child: Text(
+              title,
+              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            )),
+          ]),
+          content: Column(mainAxisSize: MainAxisSize.min, children: [
+            Icon(
+              Icons.barcode_reader,
+              size: 100,
+              color: Global.getColorOfButton(ButtonState.default0),
+            ),
+            const SizedBox(height: 20),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+              decoration: BoxDecoration(
+                color: Colors.grey.withOpacity(0.2),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Text(
+                content,
+                style: const TextStyle(fontSize: 14, color: Colors.black),
+                textAlign: TextAlign.center,
+              ),
+            ),
+          ]),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(null),
+              child: const Text('Mégse'),
+            ),
+          ],
         );
       },
     );
-    tempScannerDatawedge.scannerDatas.removeListener(listener);
-    await player.dispose();
+    scannerDatas.removeListener(listener);
+    scannerDatawedge.dispose();
+    scannerDatas.dispose();
     return result;
   }
 

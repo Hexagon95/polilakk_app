@@ -12,7 +12,8 @@ class RouteFestesreFelrakas extends StatefulWidget {//---------- ---------- ----
 
 class RouteFestesreFelrakasState extends State<RouteFestesreFelrakas> {//---------- ---------- ---------- ---------- ---------- ---------- ---------- <RouteFestesreFelrakasState>
   // ---------- [⚡️ static variables] --- ---------- ---------- ---------- ---------- ---------- ---------- ---------- ---------- ---------- ---------- //
-  static List<dynamic> rawData = [];
+  static List<dynamic> dataGerenda =  [];
+  static List<dynamic> rawData =      [];
 
   // ---------- [🌸 simple variables] --- ---------- ---------- ---------- ---------- ---------- ---------- ---------- ---------- ---------- ---------- //
   late double _contentWidth;
@@ -60,6 +61,7 @@ class RouteFestesreFelrakasState extends State<RouteFestesreFelrakas> {//-------
             _drawWorkMessage,
           ])),
         ),
+        bottomNavigationBar: _drawBottomBar,
       ),
     );
   }
@@ -111,6 +113,57 @@ class RouteFestesreFelrakasState extends State<RouteFestesreFelrakas> {//-------
             ),
           )),
         ]),
+      ),
+    ),
+  );
+
+  Widget get _drawBottomBar => SafeArea(child: Container(
+    padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
+    decoration: const BoxDecoration(
+      color: Color(0xFFFFFFFF),
+      boxShadow: [BoxShadow(
+        color:      Color(0x33000000),
+        blurRadius: 12,
+        offset:     Offset(0, -3),
+      )],
+    ),
+    child: _drawBottomButton(
+      text:      'Gerendák lezárása',
+      icon:      Icons.view_stream_outlined,
+      onPressed: _buttonFinishGerendaPressed,
+    ),
+  ));
+
+  Widget _drawBottomButton({
+    required String text,
+    required IconData icon,
+    required VoidCallback? onPressed,
+  }) => SizedBox(
+    height: 58,
+    child: OutlinedButton.icon(
+      onPressed: onPressed,
+      icon:      Icon(icon, size: 23),
+      label: Text(
+        text,
+        textAlign: TextAlign.center,
+        maxLines:  2,
+        softWrap:  true,
+        style: const TextStyle(
+          fontSize:   14,
+          fontWeight: FontWeight.w600,
+        ),
+      ),
+      style: OutlinedButton.styleFrom(
+        foregroundColor: const Color(0xFF2F2587),
+        backgroundColor: const Color(0xFFF8F7FF),
+        side: const BorderSide(
+          color: Color(0xFF2F2587),
+          width: 1.5,
+        ),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(10),
+        ),
+        padding: const EdgeInsets.symmetric(horizontal: 8),
       ),
     ),
   );
@@ -383,17 +436,81 @@ class RouteFestesreFelrakasState extends State<RouteFestesreFelrakas> {//-------
     );
     if(amount == null) return;
     if(!mounted) return;
-    int? beamID = await Global.integerDialog(
-      context,
-      title:   'ℹ️ Gerendaszám megadása',
-      content: 'Adja meg a gerenda azonosítóját:',
-    );
+    int? beamID = await _gerendaDialog(item);
     if(beamID == null) return;
     int selectedIndex = rawData.indexWhere((rawItem) => identical(rawItem, item));
     if(selectedIndex < 0) return;
     if(!mounted) return;
     setState(() => stamp(selectedIndex, amount, beamID));
     await finalCheck();
+  }
+
+  Future<int?> _gerendaDialog(dynamic item) async{
+    TextEditingController controller = TextEditingController();
+    String? errorText;
+    int? result = await showDialog<int>(
+      context: context,
+      barrierDismissible: false,
+      builder: (dialogContext) => StatefulBuilder(
+        builder: (context, setDialogState){
+          void submit(){
+            int? beamID = int.tryParse(controller.text.trim());
+            if(beamID == null){
+              setDialogState(() => errorText = 'Adjon meg egy érvényes gerendaszámot!');
+              return;
+            }
+            int gerendaIndex = dataGerenda.indexWhere((gerenda) => gerenda['id']?.toString() == beamID.toString());
+            if(gerendaIndex < 0){
+              setDialogState(() => errorText = 'Nem létező gerendaszámot adott meg!');
+              return;
+            }
+            dynamic gerenda = dataGerenda[gerendaIndex];
+            if(gerenda['lezarva']?.toString() == '1'){
+              setDialogState(() => errorText = 'A gerenda már lezárásra került!');
+              return;
+            }
+            String gerendaCikkszam = gerenda['cikkszam']?.toString() ?? '0';
+            String itemCikkszam = item['szin_cikkszam']?.toString() ?? '';
+            if(gerendaCikkszam != '0' && gerendaCikkszam != itemCikkszam){
+              setDialogState(() => errorText = 'Csak azonos színeket lehet egy gerendára rakni!');
+              return;
+            }
+            Navigator.pop(dialogContext, beamID);
+          }
+          return AlertDialog(
+            title: const Text(
+              'ℹ️ Gerendaszám megadása',
+              style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
+            ),
+            content: TextField(
+              controller: controller,
+              autofocus: true,
+              keyboardType: TextInputType.number,
+              textInputAction: TextInputAction.done,
+              onChanged: (_) {
+                if(errorText != null) setDialogState(() => errorText = null);
+              },
+              onSubmitted: (_) => submit(),
+              decoration: InputDecoration(
+                labelText: 'Gerenda azonosító',
+                errorText: errorText,
+              ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(dialogContext),
+                child: const Text('Mégse'),
+              ),
+              TextButton(
+                onPressed: submit,
+                child: const Text('Ok'),
+              ),
+            ],
+          );
+        },
+      ),
+    );
+    return result;
   }
 
   void stamp(int index, int amount, int beamID){
@@ -457,6 +574,162 @@ class RouteFestesreFelrakasState extends State<RouteFestesreFelrakas> {//-------
         rawData[itemIndex] = restoredItem;
       }
     });
+  }
+
+  Future<void> _buttonFinishGerendaPressed() async{
+    await DataManager(
+      appAction: AppAction.callFinishFestesreFelrakas,
+      input:     {'data': rawData},
+    ).beginCall;
+    dataGerenda = await DataManager(appAction: AppAction.callGerenda).beginCall;
+    List<Map<String, dynamic>> openGerenda = [];
+    for(dynamic gerenda in dataGerenda){
+      String cikkszam = gerenda['cikkszam']?.toString() ?? '';
+      if(gerenda['lezarva']?.toString() == '1' || cikkszam.isEmpty || cikkszam == '0') continue;
+      int articleIndex = rawData.indexWhere((item) => item['cikkszam']?.toString() == cikkszam);
+      dynamic article = articleIndex < 0 ? null : rawData[articleIndex];
+      openGerenda.add({
+        'id':       gerenda['id'],
+        'cikkszam': gerenda['cikkszam'],
+        'picture':  article?['picture'],
+      });
+    }
+    Map<String, dynamic>? selectedGerenda = await _selectGerendaToCloseDialog(openGerenda);
+    if(selectedGerenda == null) return;
+    dynamic message = await DataManager(appAction: AppAction.callFinishGerenda, input: {
+      'id':       selectedGerenda['id'],
+      'user_id':  DataManager.userID
+    }).beginCall;
+    String cleanMessage = message.toString().replaceAll(RegExp(r'[\[\]]'), '').trim();
+    await Global.showAlertDialog(context,
+      title:    cleanMessage.isEmpty ? 'ℹ️ Gerenda Lezárva!' : '⚠️ Hiba!',
+      content:  cleanMessage.isEmpty ? '✅' : cleanMessage
+    );
+    dataGerenda = await DataManager(appAction: AppAction.callGerenda).beginCall;
+    if(cleanMessage.isEmpty){
+      rawData = await DataManager(appAction: AppAction.callFestesreFelrakas).beginCall;
+      if(mounted) setState((){});
+    }
+  }
+
+  Future<Map<String, dynamic>?> _selectGerendaToCloseDialog(List<Map<String, dynamic>> items) async{
+    int? selectedIndex;
+    return await showDialog<Map<String, dynamic>>(
+      context: context,
+      barrierDismissible: false,
+      builder: (dialogContext) => StatefulBuilder(
+        builder: (context, setDialogState) => AlertDialog(
+          title: const Text(
+            'ℹ️ Válassza ki a lezárandó gerendát!',
+            style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
+          ),
+          content: SizedBox(
+            width: double.maxFinite,
+            child: items.isEmpty
+              ? const Padding(
+                  padding: EdgeInsets.symmetric(vertical: 30),
+                  child: Center(child: Text(
+                    'Nincs lezárható gerenda.',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(fontSize: 15, color: Color(0xFF777777)),
+                  )),
+                )
+              : ListView.builder(
+                  shrinkWrap: true,
+                  itemCount: items.length,
+                  itemBuilder: (context, index){
+                    Map<String, dynamic> item = items[index];
+                    bool selected = selectedIndex == index;
+                    return InkWell(
+                      onTap: () => setDialogState(() => selectedIndex = index),
+                      child: Container(
+                        padding: const EdgeInsets.all(8),
+                        margin: const EdgeInsets.only(bottom: 6),
+                        decoration: BoxDecoration(
+                          color: selected ? const Color(0x182F2587) : Colors.white,
+                          border: Border.all(
+                            color: selected ? const Color(0xFF2F2587) : const Color.fromARGB(130, 184, 184, 184),
+                            width: 1,
+                          ),
+                          borderRadius: const BorderRadius.all(Radius.circular(8)),
+                        ),
+                        child: Row(children: [
+                          Radio<int>(
+                            value: index,
+                            groupValue: selectedIndex,
+                            onChanged: (value) => setDialogState(() => selectedIndex = value),
+                          ),
+                          Container(
+                            width: 72,
+                            height: 58,
+                            padding: const EdgeInsets.all(4),
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(7),
+                              border: Border.all(color: const Color(0x22000000)),
+                            ),
+                            child: Image.network(
+                              item['picture']?.toString() ?? '',
+                              fit: BoxFit.contain,
+                              errorBuilder: (context, error, stackTrace) => const Icon(
+                                Icons.image_not_supported_outlined,
+                                size: 30,
+                                color: Color(0xFF999999),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Gerenda: ${item['id']}',
+                                style: const TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold,
+                                  color: Color(0xFF2F2587),
+                                ),
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                'Cikkszám: ${item['cikkszam']}',
+                                style: const TextStyle(
+                                  fontSize: 14,
+                                  color: Color(0xFF555555),
+                                ),
+                              ),
+                            ],
+                          )),
+                        ]),
+                      ),
+                    );
+                  },
+                ),
+          ),
+          actions: [
+            if(items.isNotEmpty)
+              TextButton(
+                onPressed: selectedIndex == null
+                  ? null
+                  : () async{
+                      bool confirm = await Global.yesNoDialog(
+                        context,
+                        title:   '⚠️ Megerősítés',
+                        content: 'ℹ️ Megerősíti a kiválasztott gerenda lezárását?',
+                      );
+                      if(!confirm) return;
+                      if(dialogContext.mounted) Navigator.pop(dialogContext, items[selectedIndex!]);
+                    },
+                child: const Text('Ok'),
+              ),
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext),
+              child: Text(items.isEmpty ? 'Bezárás' : 'Mégsem'),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   Future<void> handlePop() async{

@@ -12,7 +12,7 @@ class DataManager{
   void get bookMarks {beginCall;}
 
   // ---------- [⚡️ static variables] --- ---------- ---------- ---------- ---------- ---------- ---------- ---------- ---------- ---------- ---------- //
-  static const String thisVersion =     '0.1g';
+  static const String thisVersion =     '0.3';
   static int verzioTest =               0;            // <--- Anything other than 0 will draw "[Teszt #]" at the LogIn screen.
   static String actualVersion =         thisVersion;
   static String customer =              'Koat2';
@@ -22,6 +22,7 @@ class DataManager{
   static Map<AppAction, dynamic> data = {};
   static bool isServerAvailable =       true;
   static int userID =                   1;
+  static String mastercode =            '';
 
   // ---------- [🌸 simple variables] --- ---------- ---------- ---------- ---------- ---------- ---------- ---------- ---------- ---------- ---------- //
   final Map<String,String> headers = {'Content-Type': 'application/json'};
@@ -38,7 +39,14 @@ class DataManager{
     data[appAction] = null;
     try {isServerAvailable = true; switch(appAction){
 
+      case AppAction.callMastercode:
+        http.Response response =  await http.get(Uri.parse('${urlPath}mastercode.txt'));
+        data[appAction] =         response.body;
+        mastercode =              data[appAction].toString().trim();
+        break;
+
       case AppAction.callElokezeles:
+        await DataManager(appAction: AppAction.callMastercode).beginCall;
         var queryParameters = {
           'customer':   customer,
         };
@@ -52,6 +60,24 @@ class DataManager{
           'customer':   customer,
         };
         Uri uriUrl =              Uri.parse('${urlPath}festesre_felrakas.php');
+        http.Response response =  await http.post(uriUrl, body: json.encode(queryParameters), headers: headers);
+        data[appAction] =         (await jsonDecode(await jsonDecode(response.body)[0]['b']));
+        break;
+
+      case AppAction.callPorfestes:
+        var queryParameters = {
+          'customer':   customer,
+        };
+        Uri uriUrl =              Uri.parse('${urlPath}porfestes.php');
+        http.Response response =  await http.post(uriUrl, body: json.encode(queryParameters), headers: headers);
+        data[appAction] =         (await jsonDecode(await jsonDecode(response.body)[0]['b']));
+        break;
+
+      case AppAction.callGerenda:
+        var queryParameters = {
+          'customer':   customer,
+        };
+        Uri uriUrl =              Uri.parse('${urlPath}gerenda.php');
         http.Response response =  await http.post(uriUrl, body: json.encode(queryParameters), headers: headers);
         data[appAction] =         (await jsonDecode(await jsonDecode(response.body)[0]['b']));
         break;
@@ -75,6 +101,17 @@ class DataManager{
         http.Response response =  await http.post(uriUrl, body: json.encode(queryParameters), headers: headers);
         data[appAction] =         await jsonDecode(response.body);
         break;
+
+      case AppAction.callFinishGerenda:
+        var queryParameters = {
+          'customer': customer,
+          'id':       input['id'],
+          'user_id':  input['user_id']
+        };
+        Uri uriUrl =              Uri.parse('${urlPath}finish_gerenda.php');
+        http.Response response =  await http.post(uriUrl, body: json.encode(queryParameters), headers: headers);
+        data[appAction] =         await jsonDecode(response.body);
+        break;
       
       case AppAction.callFinishElokezeles:
         var queryParameters = {
@@ -92,6 +129,16 @@ class DataManager{
           'parameter':  jsonEncode(input['data'])
         };
         Uri uriUrl =              Uri.parse('${urlPath}finish_festesre_felrakas.php');
+        http.Response response =  await http.post(uriUrl, body: json.encode(queryParameters), headers: headers);
+        data[appAction] =         await jsonDecode(response.body);
+        break;
+
+      case AppAction.callFinishPorfestes:
+        var queryParameters = {
+          'customer':   customer,
+          'parameter':  jsonEncode(input['data'])
+        };
+        Uri uriUrl =              Uri.parse('${urlPath}finish_porfestes.php');
         http.Response response =  await http.post(uriUrl, body: json.encode(queryParameters), headers: headers);
         data[appAction] =         await jsonDecode(response.body);
         break;
