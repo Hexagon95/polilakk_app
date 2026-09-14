@@ -12,7 +12,7 @@ class DataManager{
   void get bookMarks {beginCall;}
 
   // ---------- [⚡️ static variables] --- ---------- ---------- ---------- ---------- ---------- ---------- ---------- ---------- ---------- ---------- //
-  static const String thisVersion =     '0.3a';
+  static const String thisVersion =     '1.3a';
   static int verzioTest =               0;            // <--- Anything other than 0 will draw "[Teszt #]" at the LogIn screen.
   static String actualVersion =         thisVersion;
   static String customer =              'Koat2';
@@ -46,7 +46,14 @@ class DataManager{
         http.Response response = await http.post(uriUrl, body: json.encode(queryParameters), headers: headers);
         data[appAction] = jsonDecode(response.body);
         actualVersion = data[appAction][0]['verzio_koat_app'].toString().trim();
-        if(actualVersion != thisVersion && Global.currentRoute != AppAction.routeLogIn) Restart.restartApp();
+        if(actualVersion != thisVersion && Global.currentRoute != AppAction.routeLogIn){
+          await Global.showAlertDialog(
+            input,
+            title: 'Új verzió érhető el!',
+            content: 'ℹ️ Az alkalmazás újraindul a frissítéshez.',
+          );
+          Restart.restartApp();
+        }
         break;
 
       case AppAction.callMastercode:

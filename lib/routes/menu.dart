@@ -100,12 +100,14 @@ class MenuState extends State<MenuFrame> {//---------- ---------- ---------- ---
 
   // ---------- < Methods [1] > --------- ---------- ---------- ---------- ---------- ---------- ---------- ---------- ---------- ---------- ---------- //
   Future<void> buttonElokezelesPressed() async{
+    await DataManager(appAction: AppAction.callverzio, input: context).beginCall;
     RouteElokezelesState.rawData = await DataManager(appAction: AppAction.callElokezeles).beginCall;
     Global.routeNext =  AppAction.routeElokezeles;
     await Navigator.pushNamed(context, '/menu/elokezeles');
   }
 
   Future<void> buttonFestesreFelrakasPressed() async{
+    await DataManager(appAction: AppAction.callverzio, input: context).beginCall;
     RouteFestesreFelrakasState.rawData =      await DataManager(appAction: AppAction.callFestesreFelrakas).beginCall;
     RouteFestesreFelrakasState.dataGerenda =  await DataManager(appAction: AppAction.callGerenda).beginCall;
     Global.routeNext =  AppAction.routeFestesreFelrakas;
@@ -113,6 +115,7 @@ class MenuState extends State<MenuFrame> {//---------- ---------- ---------- ---
   }
 
   Future<void> buttonPorfestesPressed() async{
+    await DataManager(appAction: AppAction.callverzio, input: context).beginCall;
     RoutePorfestesState.rawData = await DataManager(appAction: AppAction.callPorfestes).beginCall;
     Global.routeNext =            AppAction.routePorfestes;
     await Navigator.pushNamed(context, '/menu/porfestes');
