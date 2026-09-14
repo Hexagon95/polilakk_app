@@ -9,7 +9,7 @@ import 'src/scanner_datawedge.dart';
 // ---------- < Enums > --- ---------- ---------- ---------- ----------
 enum AppAction{
   routeLogIn, routeMenu, routeElokezeles, routeFestesreFelrakas, routePorfestes,
-  callLogInSecondTime, callElokezeles, callTermelesKosar, callFestesreFelrakas, callMastercode, callGerenda, callPorfestes,
+  callverzio, callLogInSecondTime, callElokezeles, callTermelesKosar, callFestesreFelrakas, callMastercode, callGerenda, callPorfestes,
   callFinishElokezeles, callFinishTermelsKosar, callFinishFestesreFelrakas, callFinishGerenda, callFinishPorfestes,
   default0, 
 }

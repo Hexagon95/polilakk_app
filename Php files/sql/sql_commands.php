@@ -9,6 +9,7 @@ class SqlCommand{
     public function select_termelesFolyamat3()	        {return "SELECT * FROM [dbo].[Termeles_folyamat3] ()";}
     public function select_termelesFolyamat2Gerenda()   {return "SELECT b FROM [dbo].[Termeles_folyamat2_gerenda] ()";}
     public function select_termelesKosar()	            {return "SELECT b FROM [dbo].[Termeles_kosar] ()";}
+    public function select_verzio()                     {return "SELECT verzio_koat_app FROM [dbo].[Parameters]";}
     public function exec_termelesFolyamat1Felvitele()   {return "EXEC [dbo].[Termeles_folyamat1_felvitele] :parameter, :output";}
     public function exec_termelesFolyamat2Felvitele()   {return "EXEC [dbo].[Termeles_folyamat2_felvitele] :parameter, :output";}
     public function exec_termelesFolyamat3Felvitele()   {return "EXEC [dbo].[Termeles_folyamat3_felvitele] :parameter, :output";}

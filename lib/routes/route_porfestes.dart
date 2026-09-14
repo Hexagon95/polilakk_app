@@ -233,9 +233,10 @@ class RoutePorfestesState extends State<RoutePorfestes> {//---------- ----------
     if(scannedCode == null || scannedCode.isEmpty) return;
     if(!mounted) return;
     setState((){
-      item['festes_alatt'] = 1;
-      item['time_stamp'] = DateFormat('yyyy-MM-dd HH:mm:ss').format(DateTime.now());
-      item['user_id'] = DataManager.userID;
+      item['festes_alatt'] =  1;
+      item['festes_porkod'] = scannedCode;
+      item['time_stamp'] =    DateFormat('yyyy-MM-dd HH:mm:ss').format(DateTime.now());
+      item['user_id'] =       DataManager.userID;
     });
     await DataManager(appAction: AppAction.callFinishPorfestes, input: {'data': rawData}).beginCall;
     rawData = await DataManager(appAction: AppAction.callPorfestes).beginCall;

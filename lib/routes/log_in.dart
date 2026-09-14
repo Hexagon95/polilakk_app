@@ -1,3 +1,4 @@
+import 'package:polilakk_app/src/ota_plugin.dart';
 import 'package:polilakk_app/data_manager.dart';
 import 'package:polilakk_app/global.dart';
 import 'package:flutter/foundation.dart';
@@ -13,18 +14,23 @@ class LogInMenuFrame extends StatefulWidget {//------ ---------- ---------- ----
 class LogInMenuState extends State<LogInMenuFrame> {//---------- ---------- ---------- ---------- ---------- ---------- <LogInMenuState>
   // ---------- [🌸 simple variables] --- ---------- ---------- ---------- ---------- ---------- ---------- ---------- ---------- ---------- ---------- //
   late double _contentWidth;
+  int otaProgress =                   0;
+  bool updateNeeded =                 false;
+
+  // ---------- [💎 complex variables] -- ---------- ---------- ---------- ---------- ---------- ---------- ---------- ---------- ---------- ---------- //
+  final OtaPlugin otaPlugin =         OtaPlugin();
 
   // ---------- < WidgetBuild [0] > ----- ---------- ---------- ---------- ---------- ---------- ---------- ---------- ---------- ---------- ---------- //
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context){
     final double screenWidth = MediaQuery.sizeOf(context).width;
     _contentWidth = (screenWidth - 50).clamp(0.0, 400.0).toDouble();
     return PopScope(canPop: false, child: Scaffold(backgroundColor: Colors.white, body: Container(
       width:      double.infinity,
       height:     double.infinity,
-      decoration: const BoxDecoration(image:  DecorationImage(
-        image:  AssetImage('images/background.png'),
-        fit:    BoxFit.cover,
+      decoration: const BoxDecoration(image: DecorationImage(
+        image: AssetImage('images/background.png'),
+        fit:   BoxFit.cover,
       )),
       child: SafeArea(child: _drawLogInMenu),
     )));
@@ -32,10 +38,10 @@ class LogInMenuState extends State<LogInMenuFrame> {//---------- ---------- ----
 
   // ---------- < WidgetBuild [1] > ----- ---------- ---------- ---------- ---------- ---------- ---------- ---------- ---------- ---------- ---------- //
   Widget get _drawLogInMenu => Center(child: SingleChildScrollView(
-    padding:  const EdgeInsets.symmetric(horizontal: 25, vertical: 40),
-    child:    SizedBox(width: _contentWidth, child: Column(
-      mainAxisAlignment:  MainAxisAlignment.center,
-      children:           _logInWidgets,
+    padding: const EdgeInsets.symmetric(horizontal: 25, vertical: 40),
+    child: SizedBox(width: _contentWidth, child: Column(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children:          _logInWidgets,
     )),
   ));
 
@@ -50,42 +56,71 @@ class LogInMenuState extends State<LogInMenuFrame> {//---------- ---------- ----
 
   // ---------- < WidgetBuild [3] > ----- ---------- ---------- ---------- ---------- ---------- ---------- ---------- ---------- ---------- ---------- //
   Widget get _drawLogo => Container(
-    decoration:   const BoxDecoration(boxShadow: [BoxShadow(
+    decoration: const BoxDecoration(boxShadow: [BoxShadow(
       color:        Color.fromARGB(100, 0, 0, 0),
       blurRadius:   15,
       spreadRadius: 2,
       offset:       Offset(0, 10),
     )]),
-    child: Image.asset('images/image.png', 
-      width:        _contentWidth,
-      fit:          BoxFit.contain,
-      errorBuilder: (BuildContext context, Object error, StackTrace? stackTrace) => const Text('Polilakk',
-        textAlign:  TextAlign.center,
-        style:      TextStyle(fontSize: 42, fontWeight: FontWeight.bold, color: Color.fromARGB(255, 47, 37, 135)),
+    child: Image.asset('images/image.png',
+      width: _contentWidth,
+      fit:   BoxFit.contain,
+      errorBuilder: (BuildContext context, Object error, StackTrace? stackTrace) => const Text(
+        'Polilakk',
+        textAlign: TextAlign.center,
+        style: TextStyle(fontSize: 42, fontWeight: FontWeight.bold, color: Color.fromARGB(255, 47, 37, 135)),
       )
     ),
-  );  
+  );
 
   Widget get _drawVerzio => Column(children: [
-    Text('v${DataManager.thisVersion}${(DataManager.verzioTest == 0)? '' : '   [Teszt: ${DataManager.verzioTest.toString()}]'}', style: TextStyle(color: Global.getColorOfButton(ButtonState.default0), fontSize: 26, fontWeight: FontWeight.bold)),
+    Text(
+      'v${DataManager.thisVersion}${(DataManager.verzioTest == 0) ? '' : '   [Teszt: ${DataManager.verzioTest}]'}',
+      style: TextStyle(color: Global.getColorOfButton(ButtonState.default0), fontSize: 26, fontWeight: FontWeight.bold),
+    ),
   ]);
 
   Widget get _drawLogInButton => SizedBox(width: double.infinity, height: 48, child: ElevatedButton(
-    onPressed:  _logInPressed,
-    style:      ElevatedButton.styleFrom(
+    onPressed: updateNeeded ? null : _logInPressed,
+    style: ElevatedButton.styleFrom(
       backgroundColor: const Color.fromRGBO(47, 37, 135, 1),
       foregroundColor: Colors.white,
+      disabledBackgroundColor: const Color.fromRGBO(47, 37, 135, 0.55),
+      disabledForegroundColor: Colors.white,
       elevation:        2,
-      shape:            RoundedRectangleBorder(borderRadius: BorderRadius.circular(6),),
+      shape:            RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
     ),
-    child:      const Text('Bejelentkezés', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600)),
+    child: Text(
+      updateNeeded
+        ? otaProgress > 0
+          ? 'Új verzió érhető el.\nLetöltés: $otaProgress%'
+          : 'Új verzió érhető el.'
+        : 'Bejelentkezés',
+      style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
+    ),
   ));
 
   // ---------- < Methods [1] > --------- ---------- ---------- ---------- ---------- ---------- ---------- ---------- ---------- ---------- ---------- //
-  Future _logInPressed() async{
+  Future<void> _logInPressed() async{
+    await DataManager(appAction: AppAction.callverzio).beginCall;
+    if(DataManager.actualVersion != DataManager.thisVersion){
+      setState(() => updateNeeded = true);
+      await tryOtaUpdate();
+      return;
+    }
     dynamic result = await Global.logInDialog(context);
     if(kDebugMode) print(result.toString());
     Global.routeNext = AppAction.routeMenu;
     await Navigator.pushNamed(context, '/menu');
+  }
+
+  Future<void> tryOtaUpdate() async{
+    await otaPlugin.tryOtaUpdate(
+      version: DataManager.actualVersion,
+      onProgress: (progress){
+        if(!mounted) return;
+        setState(() => otaProgress = progress);
+      },
+    );
   }
 }

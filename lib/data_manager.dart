@@ -1,6 +1,6 @@
-
-import 'package:polilakk_app/global.dart';
 import 'package:audioplayers/audioplayers.dart';
+import 'package:polilakk_app/global.dart';
+import 'package:restart_app/restart_app.dart';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'dart:developer' as dev;
@@ -12,7 +12,7 @@ class DataManager{
   void get bookMarks {beginCall;}
 
   // ---------- [⚡️ static variables] --- ---------- ---------- ---------- ---------- ---------- ---------- ---------- ---------- ---------- ---------- //
-  static const String thisVersion =     '0.3';
+  static const String thisVersion =     '0.3a';
   static int verzioTest =               0;            // <--- Anything other than 0 will draw "[Teszt #]" at the LogIn screen.
   static String actualVersion =         thisVersion;
   static String customer =              'Koat2';
@@ -30,7 +30,6 @@ class DataManager{
   dynamic input;
 
   // ---------- [💎 complex variables] -- ---------- ---------- ---------- ---------- ---------- ---------- ---------- ---------- ---------- ---------- //
-  // ---------- < Methods [Static] > ---- ---------- ---------- ---------- ---------- ---------- ---------- ---------- ---------- ---------- ---------- //
   // ---------- < Constructor > ---- ---- ---------- ---------- ---------- ---------- ---------- ---------- ---------- ---------- ---------- ---------- //
   DataManager({required this.appAction, this.input});
 
@@ -38,6 +37,17 @@ class DataManager{
   Future<dynamic> get beginCall async{
     data[appAction] = null;
     try {isServerAvailable = true; switch(appAction){
+
+      case AppAction.callverzio:
+        var queryParameters = {
+          'customer': 'mosaic',
+        };
+        Uri uriUrl = Uri.parse('${urlPath}verzio.php');
+        http.Response response = await http.post(uriUrl, body: json.encode(queryParameters), headers: headers);
+        data[appAction] = jsonDecode(response.body);
+        actualVersion = data[appAction][0]['verzio_koat_app'].toString().trim();
+        if(actualVersion != thisVersion && Global.currentRoute != AppAction.routeLogIn) Restart.restartApp();
+        break;
 
       case AppAction.callMastercode:
         http.Response response =  await http.get(Uri.parse('${urlPath}mastercode.txt'));
@@ -90,7 +100,7 @@ class DataManager{
         http.Response response =  await http.post(uriUrl, body: json.encode(queryParameters), headers: headers);
         data[appAction] =         (await jsonDecode(await jsonDecode(response.body)[0]['b']));
         break;
-      
+
       case AppAction.callFinishTermelsKosar:
         var queryParameters = {
           'customer': customer,
@@ -112,7 +122,7 @@ class DataManager{
         http.Response response =  await http.post(uriUrl, body: json.encode(queryParameters), headers: headers);
         data[appAction] =         await jsonDecode(response.body);
         break;
-      
+
       case AppAction.callFinishElokezeles:
         var queryParameters = {
           'customer':   customer,

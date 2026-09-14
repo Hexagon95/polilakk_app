@@ -560,6 +560,31 @@ class RouteElokezelesState extends State<RouteElokezeles> {//---------- --------
                               : const Color(0xFF888888),
                     ),
                   ),
+                  const SizedBox(height: 5),
+                  Row(children: [
+                    Icon(
+                      Icons.straighten,
+                      size: 15,
+                      color: isCompleted
+                        ? const Color(0xFF229944)
+                        : isNotFound
+                          ? const Color(0xFFCC3333)
+                          : const Color(0xFF777777),
+                    ),
+                    const SizedBox(width: 5),
+                    Expanded(child: Text(
+                      '${_displayValue(item['hossz'])} mm',
+                      style: TextStyle(
+                        fontSize:   12,
+                        fontWeight: FontWeight.w500,
+                        color: isCompleted
+                          ? const Color(0xFF228844)
+                          : isNotFound
+                            ? const Color(0xFFCC3333)
+                            : const Color(0xFF555555),
+                      ),
+                    )),
+                  ]),
                 ],
               )),
               const SizedBox(width: 10),
