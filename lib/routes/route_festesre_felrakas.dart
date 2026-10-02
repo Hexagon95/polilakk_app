@@ -323,6 +323,8 @@ class RouteFestesreFelrakasState extends State<RouteFestesreFelrakas> {//-------
                       ),
                     ),
                     const SizedBox(height: 5),
+                    _drawItemValue(Icons.straighten, 'Hossz', '${_displayValue(item['hossz'])} mm', isCompleted: isCompleted),
+                    const SizedBox(height: 3),
                     _drawItemValue(Icons.layers_outlined, 'Réteg', item['reteg'], isCompleted: isCompleted),
                     const SizedBox(height: 3),
                     _drawItemValue(Icons.palette_outlined, 'Szín', item['szin'], isCompleted: isCompleted),

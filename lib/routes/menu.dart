@@ -1,3 +1,5 @@
+import 'package:polilakk_app/routes/route_festesrol_leszedes.dart';
+import 'package:polilakk_app/routes/route_minosegellenorzes.dart';
 import 'package:polilakk_app/routes/route_festesre_felrakas.dart';
 import 'package:polilakk_app/routes/route_elokezeles.dart';
 import 'package:polilakk_app/routes/route_porfestes.dart';
@@ -83,6 +85,8 @@ class MenuState extends State<MenuFrame> {//---------- ---------- ---------- ---
         'Előkezelés' =>         buttonElokezelesPressed,
         'Festésre felrakás' =>  buttonFestesreFelrakasPressed,
         'Porfestés' =>          buttonPorfestesPressed,
+        'Minőségellenőrzés' =>  buttonMinosegellenorzesPressed,
+        'Festésről leszedés' => buttonFestesrolLeszedesPressed,
         _            =>         null,
       },
       style:      ElevatedButton.styleFrom(
@@ -101,8 +105,8 @@ class MenuState extends State<MenuFrame> {//---------- ---------- ---------- ---
   // ---------- < Methods [1] > --------- ---------- ---------- ---------- ---------- ---------- ---------- ---------- ---------- ---------- ---------- //
   Future<void> buttonElokezelesPressed() async{
     await DataManager(appAction: AppAction.callverzio, input: context).beginCall;
-    RouteElokezelesState.rawData = await DataManager(appAction: AppAction.callElokezeles).beginCall;
-    Global.routeNext =  AppAction.routeElokezeles;
+    RouteElokezelesState.rawData =  await DataManager(appAction: AppAction.callElokezeles).beginCall;
+    Global.routeNext =              AppAction.routeElokezeles;
     await Navigator.pushNamed(context, '/menu/elokezeles');
   }
 
@@ -110,7 +114,7 @@ class MenuState extends State<MenuFrame> {//---------- ---------- ---------- ---
     await DataManager(appAction: AppAction.callverzio, input: context).beginCall;
     RouteFestesreFelrakasState.rawData =      await DataManager(appAction: AppAction.callFestesreFelrakas).beginCall;
     RouteFestesreFelrakasState.dataGerenda =  await DataManager(appAction: AppAction.callGerenda).beginCall;
-    Global.routeNext =  AppAction.routeFestesreFelrakas;
+    Global.routeNext =                        AppAction.routeFestesreFelrakas;
     await Navigator.pushNamed(context, '/menu/festesre_felrakas');
   }
 
@@ -119,5 +123,19 @@ class MenuState extends State<MenuFrame> {//---------- ---------- ---------- ---
     RoutePorfestesState.rawData = await DataManager(appAction: AppAction.callPorfestes).beginCall;
     Global.routeNext =            AppAction.routePorfestes;
     await Navigator.pushNamed(context, '/menu/porfestes');
+  }
+
+  Future<void> buttonMinosegellenorzesPressed() async{
+    await DataManager(appAction: AppAction.callverzio, input: context).beginCall;
+    RouteMinosegellenorzesState.rawData = await DataManager(appAction: AppAction.callMinosegellenorzes).beginCall;
+    Global.routeNext =                    AppAction.routeMinosegellenorzes;
+    await Navigator.pushNamed(context, '/menu/minosegellenorzes');
+  }
+
+  Future<void> buttonFestesrolLeszedesPressed() async{
+    await DataManager(appAction: AppAction.callverzio, input: context).beginCall;
+    RouteFestesrolLeszedesState.rawData = await DataManager(appAction: AppAction.callFestesrolLeszedes).beginCall;
+    Global.routeNext =                    AppAction.routeFestesrolLeszedes;
+    await Navigator.pushNamed(context, '/menu/festesrol_leszedes');
   }
 }

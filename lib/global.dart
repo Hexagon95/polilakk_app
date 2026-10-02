@@ -8,9 +8,10 @@ import 'package:flutter/services.dart';
 import 'src/scanner_datawedge.dart';
 // ---------- < Enums > --- ---------- ---------- ---------- ----------
 enum AppAction{
-  routeLogIn, routeMenu, routeElokezeles, routeFestesreFelrakas, routePorfestes,
-  callverzio, callLogInSecondTime, callElokezeles, callTermelesKosar, callFestesreFelrakas, callMastercode, callGerenda, callPorfestes,
-  callFinishElokezeles, callFinishTermelsKosar, callFinishFestesreFelrakas, callFinishGerenda, callFinishPorfestes,
+  routeLogIn, routeMenu, routeElokezeles, routeFestesreFelrakas, routePorfestes, routeMinosegellenorzes, routeFestesrolLeszedes,
+  callverzio, callLogInSecondTime, callElokezeles, callTermelesKosar, callFestesreFelrakas, callFestesrolLeszedes, callMastercode, callGerenda, callPorfestes, callMinosegellenorzes, callKalodaFelvitele,
+  callSelectKaloda,
+  callFinishElokezeles, callFinishTermelsKosar, callFinishFestesreFelrakas, callFinishGerenda, callFinishPorfestes, callFinishMinosegellenorzes, callFinishFestesrolLeszedes,
   default0, 
 }
 enum ButtonState{hidden, loading, disabled, error, default0}
@@ -25,11 +26,13 @@ class Global{
   static set routeNext (AppAction value){
     int check(int i)  {while(_routes.length > i){_routes.removeLast();} while(_routes.length <= i){_routes.add(AppAction.default0);} return i; }
     switch (value) {
-      case AppAction.routeLogIn:            _routes[check(0)] =   value;  break;
-      case AppAction.routeMenu:             _routes[check(1)] =   value;  break;
-      case AppAction.routeElokezeles:       _routes[check(2)] =   value;  break;
-      case AppAction.routeFestesreFelrakas: _routes[check(2)] =   value;  break;
-      case AppAction.routePorfestes:        _routes[check(2)] =   value;  break;
+      case AppAction.routeLogIn:              _routes[check(0)] =   value;  break;
+      case AppAction.routeMenu:               _routes[check(1)] =   value;  break;
+      case AppAction.routeElokezeles:         _routes[check(2)] =   value;  break;
+      case AppAction.routeFestesreFelrakas:   _routes[check(2)] =   value;  break;
+      case AppAction.routePorfestes:          _routes[check(2)] =   value;  break;
+      case AppAction.routeMinosegellenorzes:  _routes[check(2)] =   value;  break;
+      case AppAction.routeFestesrolLeszedes:  _routes[check(2)] =   value;  break;
       default:  throw Exception('Default rout has been thrown!!!!');
     }
     _printRoutes;
