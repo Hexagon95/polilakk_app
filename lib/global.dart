@@ -9,9 +9,9 @@ import 'src/scanner_datawedge.dart';
 // ---------- < Enums > --- ---------- ---------- ---------- ----------
 enum AppAction{
   routeLogIn, routeMenu, routeElokezeles, routeFestesreFelrakas, routePorfestes, routeMinosegellenorzes, routeFestesrolLeszedes,
-  callverzio, callLogInSecondTime, callElokezeles, callTermelesKosar, callFestesreFelrakas, callFestesrolLeszedes, callMastercode, callGerenda, callPorfestes, callMinosegellenorzes, callKalodaFelvitele,
-  callSelectKaloda,
-  callFinishElokezeles, callFinishTermelsKosar, callFinishFestesreFelrakas, callFinishGerenda, callFinishPorfestes, callFinishMinosegellenorzes, callFinishFestesrolLeszedes,
+  callverzio, callLogInSecondTime, callElokezeles, callTermelesKosar, callFestesreFelrakas, callFestesrolLeszedes, callMastercode, callGerenda, callPorfestes, callMinosegellenorzes, callKalodaFelvitele, callCimke,
+  callSelectKaloda, callSelectKalodaZarni,
+  callFinishElokezeles, callFinishTermelsKosar, callFinishFestesreFelrakas, callFinishGerenda, callFinishPorfestes, callFinishMinosegellenorzes, callFinishFestesrolLeszedes, callFinishKalodaZaras,
   default0, 
 }
 enum ButtonState{hidden, loading, disabled, error, default0}

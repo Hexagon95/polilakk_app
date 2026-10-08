@@ -12,7 +12,7 @@ class DataManager{
   void get bookMarks {beginCall;}
 
   // ---------- [⚡️ static variables] --- ---------- ---------- ---------- ---------- ---------- ---------- ---------- ---------- ---------- ---------- //
-  static const String thisVersion =     '1.4a';
+  static const String thisVersion =     '1.4b';
   static int verzioTest =               0;            // <--- Anything other than 0 will draw "[Teszt #]" at the LogIn screen.
   static String actualVersion =         thisVersion;
   static String customer =              'Koat2';
@@ -140,6 +140,16 @@ class DataManager{
         data[appAction] =         int.parse((jsonDecode(response.body)['outputid']).toString());
         break;
 
+      case AppAction.callCimke:
+        var queryParameters = {
+          'customer': customer,
+          'id':       input['id']
+        };
+        Uri uriUrl = Uri.parse('${urlPath}cimke.php');
+        http.Response response = await http.post(uriUrl, body: json.encode(queryParameters), headers: headers);
+        data[appAction] = await jsonDecode(response.body);
+        break;
+
       case AppAction.callSelectKaloda:
         var queryParameters = {
           'customer':     customer,
@@ -147,6 +157,15 @@ class DataManager{
           'gorgozes':     input['gorgozes']
         };
         Uri uriUrl =              Uri.parse('${urlPath}select_kaloda.php');
+        http.Response response =  await http.post(uriUrl, body: json.encode(queryParameters), headers: headers);
+        data[appAction] =         (await jsonDecode(await jsonDecode(response.body)[0]['b']));
+        break;
+
+      case AppAction.callSelectKalodaZarni:
+        var queryParameters = {
+          'customer':   customer,
+        };
+        Uri uriUrl =              Uri.parse('${urlPath}select_kaloda_zarni.php');
         http.Response response =  await http.post(uriUrl, body: json.encode(queryParameters), headers: headers);
         data[appAction] =         (await jsonDecode(await jsonDecode(response.body)[0]['b']));
         break;
@@ -219,6 +238,17 @@ class DataManager{
           'parameter':  jsonEncode(input['data'])
         };
         Uri uriUrl =              Uri.parse('${urlPath}finish_festesrol_leszedes.php');
+        http.Response response =  await http.post(uriUrl, body: json.encode(queryParameters), headers: headers);
+        data[appAction] =         await jsonDecode(response.body);
+        break;
+
+      case AppAction.callFinishKalodaZaras:
+        var queryParameters = {
+          'customer': customer,
+          'id':       input['id'],
+          'user_id':  input['user_id']
+        };
+        Uri uriUrl =              Uri.parse('${urlPath}finish_kaloda_zaras.php');
         http.Response response =  await http.post(uriUrl, body: json.encode(queryParameters), headers: headers);
         data[appAction] =         await jsonDecode(response.body);
         break;

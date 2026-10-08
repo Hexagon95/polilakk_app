@@ -10,7 +10,8 @@ class RouteFestesrolLeszedes extends StatefulWidget {//---------- ---------- ---
 }
 class RouteFestesrolLeszedesState extends State<RouteFestesrolLeszedes> {//---------- ---------- ---------- ---------- ---------- ---------- ---------- <RouteFestesrolLeszedesState>
   // ---------- [⚡️ static variables] --- ---------- ---------- ---------- ---------- ---------- ---------- ---------- ---------- ---------- ---------- //
-  static List<dynamic> rawData = [];
+  static List<dynamic> dataKaloda = [];
+  static List<dynamic> rawData =    [];
   // ---------- [🌸 simple variables] --- ---------- ---------- ---------- ---------- ---------- ---------- ---------- ---------- ---------- ---------- //
   late double _contentWidth;
   // ---------- < WidgetBuild [0] > ----- ---------- ---------- ---------- ---------- ---------- ---------- ---------- ---------- ---------- ---------- //
@@ -78,7 +79,7 @@ class RouteFestesrolLeszedesState extends State<RouteFestesrolLeszedes> {//-----
     child: _drawBottomButton(
       text: 'Kalodák lezárása',
       icon: Icons.inventory_2_outlined,
-      onPressed: (){},
+      onPressed: _buttonFinishKalodaPressed,
     ),
   ));
   Widget _drawBottomButton({
@@ -351,6 +352,7 @@ class RouteFestesrolLeszedesState extends State<RouteFestesrolLeszedes> {//-----
       ],
     ),
   );
+
   // ---------- < Methods [1] > --------- ---------- ---------- ---------- ---------- ---------- ---------- ---------- ---------- ---------- ---------- //
   Future<void> _exitRoute() async{
     bool? save = await showDialog<bool>(
@@ -547,5 +549,224 @@ class RouteFestesrolLeszedesState extends State<RouteFestesrolLeszedes> {//-----
       });
       return;
     }
+  }
+  
+  Future<void> _buttonFinishKalodaPressed() async{
+    await DataManager(appAction: AppAction.callFinishFestesrolLeszedes, input:{
+      'data': rawData
+    }).beginCall;
+    dataKaloda = await DataManager(appAction: AppAction.callSelectKalodaZarni).beginCall;
+    List<Map<String, dynamic>> openKaloda = dataKaloda.map<Map<String, dynamic>>((item) => Map<String, dynamic>.from(item)).toList();
+    Map<String, dynamic>? selectedKaloda = await _selectKalodaToCloseDialog(openKaloda);
+    if(selectedKaloda == null) return;
+    dynamic message = await DataManager(appAction: AppAction.callFinishKalodaZaras, input:{
+      'id': selectedKaloda['kaloda'], 'user_id': DataManager.userID
+    }).beginCall;
+    if(!mounted) return;
+    String cleanMessage = message.toString().replaceAll(RegExp(r'[\[\]]'), '').trim();
+    await Global.showAlertDialog(
+      context,
+      title:    cleanMessage.isEmpty? 'ℹ️ Kaloda lezárva!' : '⚠️ Hiba!',
+      content:  cleanMessage.isEmpty? '✅' : cleanMessage
+    );
+    if(cleanMessage.isEmpty){
+      await DataManager(appAction: AppAction.callCimke, input: {'id': selectedKaloda['kaloda']}).beginCall;
+      dataKaloda = await DataManager(appAction: AppAction.callSelectKalodaZarni).beginCall;
+      rawData = await DataManager(appAction: AppAction.callFestesrolLeszedes).beginCall;
+      if(mounted) setState((){});
+    }
+  }
+
+  Future<Map<String, dynamic>?> _selectKalodaToCloseDialog(List<Map<String, dynamic>> items) async{
+    int? selectedIndex;
+    return await showDialog<Map<String, dynamic>>(
+      context: context,
+      barrierDismissible: false,
+      builder: (dialogContext) => StatefulBuilder(
+        builder: (context, setDialogState) => AlertDialog(
+          insetPadding: const EdgeInsets.symmetric(horizontal: 18, vertical: 24),
+          contentPadding: const EdgeInsets.fromLTRB(16, 10, 16, 8),
+          actionsPadding: const EdgeInsets.fromLTRB(12, 0, 12, 8),
+          titlePadding: const EdgeInsets.fromLTRB(18, 18, 18, 8),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+          title: const Row(children: [
+            Icon(
+              Icons.inventory_2_outlined,
+              color: Color(0xFF2F2587),
+              size: 22,
+            ),
+            SizedBox(width: 8),
+            Expanded(child: Text(
+              'Lezárandó kaloda kiválasztása',
+              style: TextStyle(
+                fontSize: 15,
+                fontWeight: FontWeight.bold,
+              ),
+            )),
+          ]),
+          content: SizedBox(
+            width: double.maxFinite,
+            child: items.isEmpty
+              ? const Padding(
+                  padding: EdgeInsets.symmetric(vertical: 28),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        Icons.inventory_2_outlined,
+                        size: 42,
+                        color: Color(0xFFAAAAAA),
+                      ),
+                      SizedBox(height: 10),
+                      Text(
+                        'Nincs lezárható kaloda.',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          fontSize: 14,
+                          color: Color(0xFF777777),
+                        ),
+                      ),
+                    ],
+                  ),
+                )
+              : ListView.separated(
+                  shrinkWrap: true,
+                  itemCount: items.length,
+                  separatorBuilder: (context, index) => const SizedBox(height: 10),
+                  itemBuilder: (context, index){
+                    Map<String, dynamic> item = items[index];
+                    bool selected = selectedIndex == index;
+                    return InkWell(
+                      onTap: () => setDialogState(() => selectedIndex = index),
+                      borderRadius: BorderRadius.circular(12),
+                      child: AnimatedContainer(
+                        duration: const Duration(milliseconds: 150),
+                        width: double.infinity,
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: selected
+                            ? const Color(0xFFF0EFFA)
+                            : const Color(0xFFF9F9FC),
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(
+                            color: selected
+                              ? const Color(0xFF2F2587)
+                              : const Color(0x22000000),
+                            width: selected ? 1.5 : 1,
+                          ),
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(children: [
+                              Container(
+                                width: 40,
+                                height: 40,
+                                decoration: BoxDecoration(
+                                  color: const Color(0x182F2587),
+                                  borderRadius: BorderRadius.circular(9),
+                                ),
+                                child: const Icon(
+                                  Icons.inventory_2_outlined,
+                                  color: Color(0xFF2F2587),
+                                  size: 23,
+                                ),
+                              ),
+                              const SizedBox(width: 10),
+                              Expanded(child: Text(
+                                'Kaloda #${_displayValue(item['kaloda'])}',
+                                style: const TextStyle(
+                                  fontSize: 17,
+                                  fontWeight: FontWeight.bold,
+                                  color: Color(0xFF2F2587),
+                                ),
+                              )),
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 9,
+                                  vertical: 6,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: selected
+                                    ? const Color(0xFF2F2587)
+                                    : const Color(0xFFECEAF8),
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                child: Text(
+                                  '${_displayValue(item['mennyiseg'])} db',
+                                  style: TextStyle(
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.bold,
+                                    color: selected
+                                      ? const Color(0xFFFFFFFF)
+                                      : const Color(0xFF2F2587),
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(width: 4),
+                              Radio<int>(
+                                value: index,
+                                groupValue: selectedIndex,
+                                materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                                onChanged: (value) => setDialogState(() => selectedIndex = value),
+                              ),
+                            ]),
+                            const SizedBox(height: 10),
+                            Row(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                const Icon(
+                                  Icons.route_outlined,
+                                  size: 17,
+                                  color: Color(0xFF666666),
+                                ),
+                                const SizedBox(width: 7),
+                                Expanded(child: Text(
+                                  _displayValue(item['tevekenyseg']),
+                                  style: const TextStyle(
+                                    fontSize: 13,
+                                    height: 1.3,
+                                    color: Color(0xFF555555),
+                                  ),
+                                )),
+                              ],
+                            ),
+                          ],
+                        ),
+                      ),
+                    );
+                  },
+                ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext),
+              child: Text(items.isEmpty ? 'Bezárás' : 'Mégsem'),
+            ),
+            if(items.isNotEmpty)
+              FilledButton(
+                onPressed: selectedIndex == null ? null : () async{
+                  bool confirm = await Global.yesNoDialog(
+                    context,
+                    title: '⚠️ Megerősítés',
+                    content: 'Megerősíti a ${items[selectedIndex!]['kaloda']}. kaloda lezárását?',
+                  );
+                  if(!confirm) return;
+                  if(dialogContext.mounted){
+                    Navigator.pop(dialogContext, items[selectedIndex!]);
+                  }
+                },
+                style: FilledButton.styleFrom(
+                  backgroundColor: const Color(0xFF2F2587),
+                  foregroundColor: const Color(0xFFFFFFFF),
+                ),
+                child: const Text('Ok'),
+              ),
+          ],
+        ),
+      ),
+    );
   }
 }
