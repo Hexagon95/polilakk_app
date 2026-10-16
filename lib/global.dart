@@ -8,10 +8,10 @@ import 'package:flutter/services.dart';
 import 'src/scanner_datawedge.dart';
 // ---------- < Enums > --- ---------- ---------- ---------- ----------
 enum AppAction{
-  routeLogIn, routeMenu, routeElokezeles, routeFestesreFelrakas, routePorfestes, routeMinosegellenorzes, routeFestesrolLeszedes,
-  callverzio, callLogInSecondTime, callElokezeles, callTermelesKosar, callFestesreFelrakas, callFestesrolLeszedes, callMastercode, callGerenda, callPorfestes, callMinosegellenorzes, callKalodaFelvitele, callCimke,
+  routeLogIn, routeMenu, routeElokezeles, routeFestesreFelrakas, routePorfestes, routeMinosegellenorzes, routeFestesrolLeszedes, routeVedofoliazas,
+  callverzio, callLogInSecondTime, callElokezeles, callTermelesKosar, callFestesreFelrakas, callFestesrolLeszedes, callMastercode, callGerenda, callPorfestes, callMinosegellenorzes, callKalodaFelvitele, callCimke, callVedofoliazas,
   callSelectKaloda, callSelectKalodaZarni,
-  callFinishElokezeles, callFinishTermelsKosar, callFinishFestesreFelrakas, callFinishGerenda, callFinishPorfestes, callFinishMinosegellenorzes, callFinishFestesrolLeszedes, callFinishKalodaZaras,
+  callFinishElokezeles, callFinishTermelsKosar, callFinishFestesreFelrakas, callFinishGerenda, callFinishPorfestes, callFinishMinosegellenorzes, callFinishFestesrolLeszedes, callFinishKalodaZaras, callFinishVedofoliazas,
   default0, 
 }
 enum ButtonState{hidden, loading, disabled, error, default0}
@@ -33,6 +33,7 @@ class Global{
       case AppAction.routePorfestes:          _routes[check(2)] =   value;  break;
       case AppAction.routeMinosegellenorzes:  _routes[check(2)] =   value;  break;
       case AppAction.routeFestesrolLeszedes:  _routes[check(2)] =   value;  break;
+      case AppAction.routeVedofoliazas:       _routes[check(2)] =   value;  break;
       default:  throw Exception('Default rout has been thrown!!!!');
     }
     _printRoutes;

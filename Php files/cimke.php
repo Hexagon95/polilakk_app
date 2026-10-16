@@ -19,18 +19,23 @@ const ITEM_COLOR_ROW_HEIGHT = 70;
 const ITEM_HEIGHT = ITEM_FIRST_ROW_HEIGHT + ITEM_COLOR_ROW_HEIGHT;
 const GROUP_SPACING = 15;
 
-const PRINT_FOLYAMAT_ID = 5;
-
 try{
     $input = json_decode(file_get_contents('php://input'), true);
     if(!is_array($input)) throw new Exception('Érvénytelen JSON.');
     $customer = trim((string)($input['customer'] ?? ''));
     $cimkeId = (int)($input['id'] ?? 0);
+    $printFolyamatId = (int)($input['menu'] ?? 5);
     if($customer === '') throw new Exception('Hiányzó customer.');
     if($cimkeId <= 0) throw new Exception('Érvénytelen címke ID.');
+    if(!in_array($printFolyamatId, [5, 6], true)) throw new Exception('Érvénytelen folyamat ID.');
     $sqlCommand = new SqlCommand();
+    if($printFolyamatId === 6){
+        $queryString = $sqlCommand->select_termelesFolyamat6KalodaCimke();
+    }else{
+        $queryString = $sqlCommand->select_termelesFolyamat5KalodaCimke();
+    }
     $databaseManager = new DatabaseManager(
-        $sqlCommand->select_termelesFolyamat5KalodaCimke(),
+        $queryString,
         [
             'id' => $cimkeId
         ],
@@ -50,14 +55,15 @@ try{
     $zpl = generateZpl($kalodaId, $qrCode, $pages);
     $printerResponse = sendToPrintQueue(
         $zpl,
-        $customer
+        $customer,
+        $printFolyamatId
     );
     echo json_encode([
         'success' => true,
         'labels' => count($pages),
         'kaloda_id' => $kalodaId,
         'cimke_id' => $cimkeId,
-        'print_folyamat_id' => PRINT_FOLYAMAT_ID,
+        'print_folyamat_id' => $printFolyamatId,
         'zpl' => $zpl,
         'printer_response' => $printerResponse
     ], JSON_UNESCAPED_UNICODE);
@@ -224,14 +230,15 @@ function zplEscape(string $value): string{
 
 function sendToPrintQueue(
     string $zpl,
-    string $customer
+    string $customer,
+    int $printFolyamatId
 ){
     $sqlCommand = new SqlCommand();
     $databaseManager = new DatabaseManager(
         $sqlCommand->exec_barcodePrintFelvitel(),
         [
             'zpl_kod' => $zpl,
-            'folyamat_id' => PRINT_FOLYAMAT_ID,
+            'folyamat_id' => $printFolyamatId,
             'ip' => ''
         ],
         $customer

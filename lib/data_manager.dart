@@ -12,7 +12,7 @@ class DataManager{
   void get bookMarks {beginCall;}
 
   // ---------- [⚡️ static variables] --- ---------- ---------- ---------- ---------- ---------- ---------- ---------- ---------- ---------- ---------- //
-  static const String thisVersion =     '1.4b';
+  static const String thisVersion =     '1.6';
   static int verzioTest =               0;            // <--- Anything other than 0 will draw "[Teszt #]" at the LogIn screen.
   static String actualVersion =         thisVersion;
   static String customer =              'Koat2';
@@ -131,6 +131,7 @@ class DataManager{
       case AppAction.callKalodaFelvitele:
         var queryParameters = {
           'customer':     customer,
+          'menu':         input['menu'],
           'vedofoliazas': input['vedofoliazas'],
           'gorgozes':     input['gorgozes'],
           'user_id':      userID
@@ -143,16 +144,28 @@ class DataManager{
       case AppAction.callCimke:
         var queryParameters = {
           'customer': customer,
-          'id':       input['id']
+          'id':       input['id'],
+          'menu':     input['menu']
         };
         Uri uriUrl = Uri.parse('${urlPath}cimke.php');
         http.Response response = await http.post(uriUrl, body: json.encode(queryParameters), headers: headers);
         data[appAction] = await jsonDecode(response.body);
         break;
 
+      case AppAction.callVedofoliazas:
+        await DataManager(appAction: AppAction.callMastercode).beginCall;
+        var queryParameters = {
+          'customer':   customer,
+        };
+        Uri uriUrl =              Uri.parse('${urlPath}vedofoliazas.php');
+        http.Response response =  await http.post(uriUrl, body: json.encode(queryParameters), headers: headers);
+        data[appAction] =         (await jsonDecode(await jsonDecode(response.body)[0]['b']));
+        break;
+
       case AppAction.callSelectKaloda:
         var queryParameters = {
           'customer':     customer,
+          'menu':         input['menu'],
           'vedofoliazas': input['vedofoliazas'],
           'gorgozes':     input['gorgozes']
         };
@@ -163,7 +176,8 @@ class DataManager{
 
       case AppAction.callSelectKalodaZarni:
         var queryParameters = {
-          'customer':   customer,
+          'customer': customer,
+          'menu':     input?['menu'],
         };
         Uri uriUrl =              Uri.parse('${urlPath}select_kaloda_zarni.php');
         http.Response response =  await http.post(uriUrl, body: json.encode(queryParameters), headers: headers);
@@ -242,9 +256,20 @@ class DataManager{
         data[appAction] =         await jsonDecode(response.body);
         break;
 
+      case AppAction.callFinishVedofoliazas:
+        var queryParameters = {
+          'customer':   customer,
+          'parameter':  jsonEncode(input['data'])
+        };
+        Uri uriUrl =              Uri.parse('${urlPath}finish_vedofoliazas.php');
+        http.Response response =  await http.post(uriUrl, body: json.encode(queryParameters), headers: headers);
+        data[appAction] =         await jsonDecode(response.body);
+        break;
+
       case AppAction.callFinishKalodaZaras:
         var queryParameters = {
           'customer': customer,
+          'menu':     input['menu'],
           'id':       input['id'],
           'user_id':  input['user_id']
         };

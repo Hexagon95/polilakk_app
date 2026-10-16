@@ -6,6 +6,7 @@ import 'package:polilakk_app/routes/route_porfestes.dart';
 import 'package:polilakk_app/data_manager.dart';
 import 'package:polilakk_app/global.dart';
 import 'package:flutter/material.dart';
+import 'package:polilakk_app/routes/route_vedofoliazas.dart';
 
 class MenuFrame extends StatefulWidget {//---------- ---------- ---------- ---------- ---------- ---------- ---------- <MenuFrame>
   const MenuFrame({super.key});
@@ -87,6 +88,7 @@ class MenuState extends State<MenuFrame> {//---------- ---------- ---------- ---
         'Porfestés' =>          buttonPorfestesPressed,
         'Minőségellenőrzés' =>  buttonMinosegellenorzesPressed,
         'Festésről leszedés' => buttonFestesrolLeszedesPressed,
+        'Védőfóliázás' =>       buttonVedofoliazasPressed,
         _            =>         null,
       },
       style:      ElevatedButton.styleFrom(
@@ -137,5 +139,12 @@ class MenuState extends State<MenuFrame> {//---------- ---------- ---------- ---
     RouteFestesrolLeszedesState.rawData = await DataManager(appAction: AppAction.callFestesrolLeszedes).beginCall;
     Global.routeNext =                    AppAction.routeFestesrolLeszedes;
     await Navigator.pushNamed(context, '/menu/festesrol_leszedes');
+  }
+
+  Future<void> buttonVedofoliazasPressed() async{
+    await DataManager(appAction: AppAction.callverzio, input: context).beginCall;
+    RouteVedofoliazasState.rawData =  await DataManager(appAction: AppAction.callVedofoliazas).beginCall;
+    Global.routeNext =                AppAction.routeVedofoliazas;
+    await Navigator.pushNamed(context, '/menu/vedofoliazas');
   }
 }
