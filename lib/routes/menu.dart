@@ -1,16 +1,16 @@
+import 'package:flutter/material.dart';
 import 'package:polilakk_app/routes/route_festesrol_leszedes.dart';
 import 'package:polilakk_app/routes/route_minosegellenorzes.dart';
 import 'package:polilakk_app/routes/route_festesre_felrakas.dart';
+import 'package:polilakk_app/routes/route_kosarba_helyezes.dart';
+import 'package:polilakk_app/routes/route_vedofoliazas.dart';
 import 'package:polilakk_app/routes/route_elokezeles.dart';
 import 'package:polilakk_app/routes/route_porfestes.dart';
 import 'package:polilakk_app/data_manager.dart';
 import 'package:polilakk_app/global.dart';
-import 'package:flutter/material.dart';
-import 'package:polilakk_app/routes/route_vedofoliazas.dart';
 
 class MenuFrame extends StatefulWidget {//---------- ---------- ---------- ---------- ---------- ---------- ---------- <MenuFrame>
   const MenuFrame({super.key});
-
 
   @override
   State<MenuFrame> createState() => MenuState();
@@ -20,7 +20,6 @@ class MenuFrame extends StatefulWidget {//---------- ---------- ---------- -----
 class MenuState extends State<MenuFrame> {//---------- ---------- ---------- ---------- ---------- ---------- ---------- <MenuState>
   // ---------- [🌸 simple variables] --- ---------- ---------- ---------- ---------- ---------- ---------- ---------- ---------- ---------- ---------- //
   late double _contentWidth;
-
 
   // ---------- < WidgetBuild [0] > ----- ---------- ---------- ---------- ---------- ---------- ---------- ---------- ---------- ---------- ---------- //
   @override
@@ -55,7 +54,10 @@ class MenuState extends State<MenuFrame> {//---------- ---------- ---------- ---
 
   // ---------- < WidgetBuild [2] > ----- ---------- ---------- ---------- ---------- ---------- ---------- ---------- ---------- ---------- ---------- //
   List<Widget> get _menuWidgets => [
-    _drawMenuButton('Előkezelés'),
+    _drawMenuButton('Kosárba helyezés'), //Előkezelés
+    const SizedBox(height: 12),
+
+    _drawMenuButton('Előkezelés'), //Előkezelés
     const SizedBox(height: 12),
 
     _drawMenuButton('Festésre felrakás'),
@@ -83,6 +85,7 @@ class MenuState extends State<MenuFrame> {//---------- ---------- ---------- ---
     height:  55,
     child:   ElevatedButton(
       onPressed: switch(text) {
+        'Kosárba helyezés' =>   buttonKosarbaHelyezesPressed,
         'Előkezelés' =>         buttonElokezelesPressed,
         'Festésre felrakás' =>  buttonFestesreFelrakasPressed,
         'Porfestés' =>          buttonPorfestesPressed,
@@ -105,6 +108,13 @@ class MenuState extends State<MenuFrame> {//---------- ---------- ---------- ---
   );
 
   // ---------- < Methods [1] > --------- ---------- ---------- ---------- ---------- ---------- ---------- ---------- ---------- ---------- ---------- //
+  Future<void> buttonKosarbaHelyezesPressed() async{
+    await DataManager(appAction: AppAction.callverzio, input: context).beginCall;
+    RouteKosarbaHelyezesState.rawData = await DataManager(appAction: AppAction.callKosarbaHelyezes).beginCall;
+    Global.routeNext =                  AppAction.routeKosarbaHelyezes;
+    await Navigator.pushNamed(context, '/menu/kosarba_helyezes');
+  }
+
   Future<void> buttonElokezelesPressed() async{
     await DataManager(appAction: AppAction.callverzio, input: context).beginCall;
     RouteElokezelesState.rawData =  await DataManager(appAction: AppAction.callElokezeles).beginCall;

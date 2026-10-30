@@ -1,7 +1,10 @@
 import 'package:polilakk_app/data_manager.dart';
 import 'package:polilakk_app/global.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
+
+enum RStatus{done, notFound, scrap, default0}
 
 class RouteFestesreFelrakas extends StatefulWidget {//---------- ---------- ---------- ---------- ---------- ---------- ---------- <RouteFestesreFelrakas>
   const RouteFestesreFelrakas({super.key});
@@ -269,43 +272,57 @@ class RouteFestesreFelrakasState extends State<RouteFestesreFelrakas> {//-------
   }
 
   Widget _drawArticleRow(dynamic item){
-    bool isCompleted = _isCompleted(item);
+    RStatus status = _setRecordStatus(item);
+    bool isDone = status == RStatus.done;
+    bool isNotFound = status == RStatus.notFound;
+    bool isScrap = status == RStatus.scrap;
+    bool isProcessed = status != RStatus.default0;
+    Color statusColor = isDone
+      ? const Color(0xFF229944)
+      : isNotFound
+        ? const Color(0xFFCC3333)
+        : isScrap
+          ? const Color(0xFFE07A00)
+          : const Color(0xFF777777);
+    Color backgroundColor = isDone
+      ? const Color(0xFFDCF5E4)
+      : isNotFound
+        ? const Color(0xFFFFE4E4)
+        : isScrap
+          ? const Color(0xFFFFF0DD)
+          : const Color(0x00000000);
     return Stack(
       clipBehavior: Clip.none,
       children: [
         InkWell(
-          onTap: isCompleted ? null : () => selectItem(item),
+          onTap: isProcessed ? null : () => selectItem(item),
           borderRadius: BorderRadius.circular(9),
           child: AnimatedContainer(
             duration: const Duration(milliseconds: 200),
-            padding:  const EdgeInsets.all(8),
+            padding: const EdgeInsets.all(8),
             decoration: BoxDecoration(
-              color:        isCompleted ? const Color(0xFFDCF5E4) : const Color(0x00000000),
+              color: backgroundColor,
               borderRadius: BorderRadius.circular(9),
-              border: isCompleted
-                ? Border.all(color: const Color(0x6633AA55), width: 1)
-                : null,
+              border: isProcessed ? Border.all(color: statusColor.withOpacity(0.45), width: 1) : null,
             ),
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.center,
               children: [
                 Container(
-                  width:   72,
-                  height:  58,
+                  width: 72,
+                  height: 58,
                   padding: const EdgeInsets.all(4),
                   decoration: BoxDecoration(
-                    color:        const Color(0xFFFFFFFF),
+                    color: const Color(0xFFFFFFFF),
                     borderRadius: BorderRadius.circular(7),
-                    border: Border.all(
-                      color: isCompleted ? const Color(0x5533AA55) : const Color(0x22000000),
-                    ),
+                    border: Border.all(color: isProcessed ? statusColor.withOpacity(0.35) : const Color(0x22000000)),
                   ),
                   child: Image.network(
                     item['picture']?.toString() ?? '',
                     fit: BoxFit.contain,
                     errorBuilder: (context, error, stackTrace) => const Icon(
                       Icons.image_not_supported_outlined,
-                      size:  30,
+                      size: 30,
                       color: Color(0xFF999999),
                     ),
                   ),
@@ -317,20 +334,22 @@ class RouteFestesreFelrakasState extends State<RouteFestesreFelrakas> {//-------
                     Text(
                       _displayValue(item['cikkszam']),
                       style: TextStyle(
-                        fontSize:   17,
+                        fontSize: 17,
                         fontWeight: FontWeight.bold,
-                        color:      isCompleted ? const Color(0xFF228844) : const Color(0xFF333333),
+                        color: isProcessed ? statusColor : const Color(0xFF333333),
                       ),
                     ),
                     const SizedBox(height: 5),
-                    _drawItemValue(Icons.straighten, 'Hossz', '${_displayValue(item['hossz'])} mm', isCompleted: isCompleted),
+                    _drawItemValue(Icons.straighten, 'Hossz', '${_displayValue(item['hossz'])} mm', isCompleted: isDone),
                     const SizedBox(height: 3),
-                    _drawItemValue(Icons.layers_outlined, 'Réteg', item['reteg'], isCompleted: isCompleted),
+                    _drawItemValue(Icons.layers_outlined, 'Réteg', item['reteg'], isCompleted: isDone),
                     const SizedBox(height: 3),
-                    _drawItemValue(Icons.palette_outlined, 'Szín', item['szin'], isCompleted: isCompleted),
-                    if(isCompleted) ...[
+                    _drawItemValue(Icons.palette_outlined, 'Szín', item['szin'], isCompleted: isDone),
+                    if(isDone) ...[
                       const SizedBox(height: 3),
                       _drawItemValue(Icons.view_stream_outlined, 'Gerenda', item['gerenda_id'], isCompleted: true),
+                      const SizedBox(height: 3),
+                      _drawItemValue(Icons.factory_outlined, 'Kabin', item['kabin'], isCompleted: true),
                     ],
                   ],
                 )),
@@ -341,24 +360,28 @@ class RouteFestesreFelrakasState extends State<RouteFestesreFelrakas> {//-------
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
                       decoration: BoxDecoration(
-                        color:        isCompleted ? const Color(0xFF33AA55) : const Color(0xFFF0F0F0),
+                        color: isProcessed ? statusColor : const Color(0xFFF0F0F0),
                         borderRadius: BorderRadius.circular(8),
                       ),
                       child: Text(
                         '${item['mennyiseg'] ?? '-'} db',
                         style: TextStyle(
-                          fontSize:   15,
+                          fontSize: 15,
                           fontWeight: FontWeight.bold,
-                          color:      isCompleted ? const Color(0xFFFFFFFF) : const Color(0xFF333333),
+                          color: isProcessed ? const Color(0xFFFFFFFF) : const Color(0xFF333333),
                         ),
                       ),
                     ),
-                    if(isCompleted) ...[
+                    if(isProcessed) ...[
                       const SizedBox(height: 6),
-                      const Icon(
-                        Icons.check_circle,
-                        color: Color(0xFF229944),
-                        size:  24,
+                      Icon(
+                        isDone
+                          ? Icons.check_circle
+                          : isNotFound
+                            ? Icons.search_off
+                            : Icons.delete_outline,
+                        color: statusColor,
+                        size: 24,
                       ),
                     ],
                   ],
@@ -367,24 +390,24 @@ class RouteFestesreFelrakasState extends State<RouteFestesreFelrakas> {//-------
             ),
           ),
         ),
-        if(isCompleted)
+        if(isProcessed)
           Positioned(
-            top:  -14,
+            top: -14,
             left: -14,
             child: Material(
-              color:     const Color(0xFFD32F2F),
+              color: const Color(0xFFD32F2F),
               elevation: 7,
-              shape:     const CircleBorder(),
+              shape: const CircleBorder(),
               child: InkWell(
                 onTap: () => undoRecord(item),
                 customBorder: const CircleBorder(),
                 child: const SizedBox(
-                  width:  34,
+                  width: 34,
                   height: 34,
                   child: Icon(
                     Icons.close,
                     color: Color(0xFFFFFFFF),
-                    size:  22,
+                    size: 22,
                   ),
                 ),
               ),
@@ -424,39 +447,160 @@ class RouteFestesreFelrakasState extends State<RouteFestesreFelrakas> {//-------
     return value.toString();
   }
 
-  bool _isCompleted(dynamic item) => item['ok']?.toString() == '1';
+  RStatus _setRecordStatus(dynamic item) => switch(item['ok']?.toString()){
+    '1' => RStatus.done,
+    '-1' => RStatus.notFound,
+    '0' => RStatus.notFound,
+    '-2' => RStatus.scrap,
+    _ => RStatus.default0,
+  };
+
+  bool _isProcessed(dynamic item) => _setRecordStatus(item) != RStatus.default0;
+
+  Future<Map<String, int>?> _itemStatusDialog(int maxAmount) async{
+    int selectedStatus = 1;
+    int? selectedAmount;
+    bool validAmount = false;
+    return await showDialog<Map<String, int>>(
+      context: context,
+      barrierDismissible: false,
+      builder: (dialogContext) => StatefulBuilder(
+        builder: (context, setDialogState) => AlertDialog(
+          scrollable: true,
+          insetPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 20),
+          contentPadding: const EdgeInsets.fromLTRB(16, 10, 16, 0),
+          title: const Text(
+            'ℹ️ Tétel rögzítése',
+            style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                autofocus: true,
+                keyboardType: TextInputType.number,
+                inputFormatters: [
+                  FilteringTextInputFormatter.digitsOnly,
+                  TextInputFormatter.withFunction((oldValue, newValue){
+                    if(newValue.text.isEmpty) return newValue;
+                    int? value = int.tryParse(newValue.text);
+                    if(value == null || value <= 0 || value > maxAmount) return oldValue;
+                    return newValue;
+                  }),
+                ],
+                decoration: InputDecoration(
+                  labelText: 'Darabszám',
+                  hintText: '1 - $maxAmount',
+                  helperText: 'Maximum: $maxAmount db',
+                  border: const OutlineInputBorder(),
+                ),
+                onChanged: (value){
+                  int? amount = int.tryParse(value);
+                  setDialogState((){
+                    selectedAmount = amount;
+                    validAmount = amount != null && amount >= 1 && amount <= maxAmount;
+                  });
+                },
+              ),
+              const SizedBox(height: 16),
+              DropdownButtonFormField<int>(
+                value: selectedStatus,
+                isExpanded: true,
+                isDense: true,
+                decoration: const InputDecoration(
+                  labelText: 'Állapot',
+                  border: OutlineInputBorder(),
+                ),
+                items: const [
+                  DropdownMenuItem(
+                    value: 1,
+                    child: Text(
+                      '✅ Rendben van',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                  DropdownMenuItem(
+                    value: -1,
+                    child: Text(
+                      '❌🔍 Nem találom az anyagot',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                  DropdownMenuItem(
+                    value: -2,
+                    child: Text(
+                      '🗑️ Selejt',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                ],
+                onChanged: (value){
+                  if(value != null) setDialogState(() => selectedStatus = value);
+                },
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: validAmount ? () => Navigator.pop(dialogContext, {
+                'mennyiseg': selectedAmount!,
+                'ok': selectedStatus,
+              }) : null,
+              child: const Text('Ok'),
+            ),
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext),
+              child: const Text('Mégsem'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 
   Future<void> selectItem(dynamic item) async{
-    if(_isCompleted(item)) return;
+    if(_isProcessed(item)) return;
     int maxAmount = int.tryParse(item['mennyiseg']?.toString() ?? '') ?? 0;
     if(maxAmount <= 0) return;
-    int? amount = await Global.integerDialog(
-      context,
-      title:   'ℹ️ Darabszám megadása',
-      content: '(Maximum: $maxAmount db)',
-      max:     maxAmount,
-    );
-    if(amount == null) return;
-    if(!mounted) return;
-    int? beamID = await _gerendaDialog(item);
-    if(beamID == null) return;
+    Map<String, int>? result = await _itemStatusDialog(maxAmount);
+    if(result == null) return;
+    int amount = result['mennyiseg']!;
+    int status = result['ok']!;
     int selectedIndex = rawData.indexWhere((rawItem) => identical(rawItem, item));
-    if(selectedIndex < 0) return;
+    if(selectedIndex < 0 || !mounted) return;
+    int? beamID;
+    String? cabin;
+    if(status == 1){
+      Map<String, dynamic>? beamResult = await _gerendaDialog(item);
+      if(beamResult == null) return;
+      beamID = beamResult['gerenda_id'] as int;
+      cabin = beamResult['kabin']?.toString();
+    }
     if(!mounted) return;
-    setState(() => stamp(selectedIndex, amount, beamID));
+    setState(() => _stampRecord(
+      selectedIndex,
+      amount,
+      status,
+      beamID: beamID,
+      cabin: cabin,
+    ));
     await finalCheck();
   }
 
-  Future<int?> _gerendaDialog(dynamic item) async{
-    TextEditingController controller = TextEditingController();
+  Future<Map<String, dynamic>?> _gerendaDialog(dynamic item) async{
+    String beamInput = '';
+    String selectedCabin = 'Nagy kabin';
     String? errorText;
-    int? result = await showDialog<int>(
+    return await showDialog<Map<String, dynamic>>(
       context: context,
       barrierDismissible: false,
       builder: (dialogContext) => StatefulBuilder(
         builder: (context, setDialogState){
           void submit(){
-            int? beamID = int.tryParse(controller.text.trim());
+            int? beamID = int.tryParse(beamInput.trim());
             if(beamID == null){
               setDialogState(() => errorText = 'Adjon meg egy érvényes gerendaszámot!');
               return;
@@ -477,26 +621,62 @@ class RouteFestesreFelrakasState extends State<RouteFestesreFelrakas> {//-------
               setDialogState(() => errorText = 'Csak azonos színeket lehet egy gerendára rakni!');
               return;
             }
-            Navigator.pop(dialogContext, beamID);
+            Navigator.pop(dialogContext, {
+              'gerenda_id': beamID,
+              'kabin': selectedCabin,
+            });
           }
           return AlertDialog(
+            scrollable: true,
+            insetPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 20),
+            contentPadding: const EdgeInsets.fromLTRB(16, 10, 16, 0),
             title: const Text(
-              'ℹ️ Gerendaszám megadása',
+              'ℹ️ Gerenda megadása',
               style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
             ),
-            content: TextField(
-              controller: controller,
-              autofocus: true,
-              keyboardType: TextInputType.number,
-              textInputAction: TextInputAction.done,
-              onChanged: (_) {
-                if(errorText != null) setDialogState(() => errorText = null);
-              },
-              onSubmitted: (_) => submit(),
-              decoration: InputDecoration(
-                labelText: 'Gerenda azonosító',
-                errorText: errorText,
-              ),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextField(
+                  autofocus: true,
+                  keyboardType: TextInputType.number,
+                  textInputAction: TextInputAction.done,
+                  inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                  onChanged: (value){
+                    beamInput = value;
+                    if(errorText != null) setDialogState(() => errorText = null);
+                  },
+                  onSubmitted: (_) => submit(),
+                  decoration: InputDecoration(
+                    labelText: 'Gerenda azonosító',
+                    errorText: errorText,
+                    border: const OutlineInputBorder(),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                DropdownButtonFormField<String>(
+                  value: selectedCabin,
+                  isExpanded: true,
+                  isDense: true,
+                  decoration: const InputDecoration(
+                    labelText: 'Kabin',
+                    border: OutlineInputBorder(),
+                  ),
+                  items: const [
+                    DropdownMenuItem(
+                      value: 'Nagy kabin',
+                      child: Text('🔷 Nagy kabin'),
+                    ),
+                    DropdownMenuItem(
+                      value: 'Kis kabin',
+                      child: Text('🔹 Kis kabin'),
+                    ),
+                  ],
+                  onChanged: (value){
+                    if(value != null) setDialogState(() => selectedCabin = value);
+                  },
+                ),
+              ],
             ),
             actions: [
               TextButton(
@@ -512,53 +692,62 @@ class RouteFestesreFelrakasState extends State<RouteFestesreFelrakas> {//-------
         },
       ),
     );
-    return result;
   }
 
-  void stamp(int index, int amount, int beamID){
+  void _stampRecord(
+    int index,
+    int amount,
+    int status, {
+    int? beamID,
+    String? cabin,
+  }){
     dynamic item = rawData[index];
     int originalAmount = int.tryParse(item['mennyiseg']?.toString() ?? '') ?? 0;
-    if(originalAmount <= 0) return;
-    if(amount <= 0 || amount > originalAmount) return;
-    Map<String, dynamic> completedItem = {
+    if(originalAmount <= 0 || amount <= 0 || amount > originalAmount) return;
+    if(status == 1 && (beamID == null || cabin == null)) return;
+    Map<String, dynamic> processedItem = {
       ...Map<String, dynamic>.from(item),
-      'mennyiseg':  amount,
-      'gerenda_id': beamID,
-      'ok':         1,
+      'mennyiseg': amount,
+      'ok': status,
       'time_stamp': DateFormat('yyyy-MM-dd HH:mm:ss').format(DateTime.now()),
-      'user_id':    DataManager.userID,
+      'user_id': DataManager.userID,
     };
+    if(status == 1){
+      processedItem['gerenda_id'] = beamID;
+      processedItem['kabin'] = cabin;
+    }else{
+      processedItem.remove('gerenda_id');
+      processedItem.remove('kabin');
+    }
+    rawData[index] = processedItem;
     if(amount < originalAmount){
       Map<String, dynamic> remainingItem = {
         ...Map<String, dynamic>.from(item),
         'mennyiseg': originalAmount - amount,
       };
       remainingItem.remove('gerenda_id');
+      remainingItem.remove('kabin');
       remainingItem.remove('ok');
       remainingItem.remove('time_stamp');
       remainingItem.remove('user_id');
-      rawData[index] = completedItem;
       rawData.insert(index + 1, remainingItem);
-    }
-    else{
-      rawData[index] = completedItem;
     }
   }
 
   Future<void> undoRecord(dynamic item) async{
-    if(!_isCompleted(item)) return;
+    if(!_isProcessed(item)) return;
     if(!await Global.yesNoDialog(
       context,
-      title:    '⚠️ Visszavonás',
-      content:  'Visszavonja a tétel rögzítését?\n${item['cikkszam']}',
-      options:  const ['Igen', 'Mégsem'],
+      title: '⚠️ Visszavonás',
+      content: 'Visszavonja a tétel rögzítését?\n${item['cikkszam']}',
+      options: const ['Igen', 'Mégsem'],
     )) return;
     int itemIndex = rawData.indexWhere((rawItem) => identical(rawItem, item));
     if(itemIndex < 0) return;
     int cancelledAmount = int.tryParse(item['mennyiseg']?.toString() ?? '') ?? 0;
     int remainingIndex = rawData.indexWhere((rawItem) =>
       !identical(rawItem, item) &&
-      !_isCompleted(rawItem) &&
+      !_isProcessed(rawItem) &&
       _sameRecord(rawItem, item)
     );
     setState((){
@@ -566,10 +755,10 @@ class RouteFestesreFelrakasState extends State<RouteFestesreFelrakas> {//-------
         int remainingAmount = int.tryParse(rawData[remainingIndex]['mennyiseg']?.toString() ?? '') ?? 0;
         rawData[remainingIndex]['mennyiseg'] = remainingAmount + cancelledAmount;
         rawData.removeAt(itemIndex);
-      }
-      else{
+      }else{
         Map<String, dynamic> restoredItem = Map<String, dynamic>.from(item);
         restoredItem.remove('gerenda_id');
+        restoredItem.remove('kabin');
         restoredItem.remove('ok');
         restoredItem.remove('time_stamp');
         restoredItem.remove('user_id');
@@ -752,7 +941,7 @@ class RouteFestesreFelrakasState extends State<RouteFestesreFelrakas> {//-------
 
   // ---------- < Methods [2] > --------- ---------- ---------- ---------- ---------- ---------- ---------- ---------- ---------- ---------- ---------- //
   bool _sameRecord(dynamic a, dynamic b){
-    const ignoredKeys = {'mennyiseg', 'gerenda_id', 'ok', 'time_stamp', 'user_id'};
+    const ignoredKeys = {'mennyiseg', 'gerenda_id', 'kabin', 'ok', 'time_stamp', 'user_id'};
     for(dynamic key in {...a.keys, ...b.keys}){
       if(ignoredKeys.contains(key)) continue;
       if(a[key]?.toString() != b[key]?.toString()) return false;
@@ -761,7 +950,7 @@ class RouteFestesreFelrakasState extends State<RouteFestesreFelrakas> {//-------
   }
   
   Future<bool> finalCheck() async{
-    if(rawData.any((item) => !_isCompleted(item))) return false;
+    if(rawData.any((item) => !_isProcessed(item))) return false;
     await DataManager(
       appAction: AppAction.callFinishFestesreFelrakas,
       input:     {'data': rawData},

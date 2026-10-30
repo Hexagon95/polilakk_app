@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:polilakk_app/routes/route_festesrol_leszedes.dart';
 import 'package:polilakk_app/routes/route_minosegellenorzes.dart';
 import 'package:polilakk_app/routes/route_festesre_felrakas.dart';
+import 'package:polilakk_app/routes/route_kosarba_helyezes.dart';
 import 'package:polilakk_app/routes/route_vedofoliazas.dart';
 import 'package:polilakk_app/routes/route_elokezeles.dart';
 import 'package:polilakk_app/routes/route_porfestes.dart';
@@ -16,7 +17,8 @@ void main() async{
     routes:       {
       '/':                        (context) =>  const LogInMenuFrame(),
       '/menu':                    (context) =>  const MenuFrame(),
-      '/menu/elokezeles':         (context) =>  const RouteElokezeles(),
+      '/menu/kosarba_helyezes':   (context) =>  const RouteKosarbaHelyezes(),
+      '/menu/elokezeles':          (context) =>  const RouteElokezeles(),
       '/menu/festesre_felrakas':  (context) =>  const RouteFestesreFelrakas(),
       '/menu/porfestes':          (context) =>  const RoutePorfestes(),
       '/menu/minosegellenorzes':  (context) =>  const RouteMinosegellenorzes(),

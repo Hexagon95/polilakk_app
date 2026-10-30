@@ -25,9 +25,9 @@ class Task{
         $this->request =            json_decode(file_get_contents('php://input'), true);
         $this->sqlCommand =         new SqlCommand();
         $this->databaseManager =    new DatabaseManager(
-            $this->sqlCommand->exec_termelesFolyamat1Felvitele(),
+            $this->sqlCommand->exec_termelesFolyamat1aFelvitele(),
             [
-                'parameter' =>  $this->request['parameter']
+                'parameter' =>  $this->request['kosar']
             ],
             $this->request['customer']
         );

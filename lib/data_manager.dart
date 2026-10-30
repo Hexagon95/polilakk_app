@@ -12,7 +12,7 @@ class DataManager{
   void get bookMarks {beginCall;}
 
   // ---------- [⚡️ static variables] --- ---------- ---------- ---------- ---------- ---------- ---------- ---------- ---------- ---------- ---------- //
-  static const String thisVersion =     '1.6';
+  static const String thisVersion =     '1.8';
   static int verzioTest =               0;            // <--- Anything other than 0 will draw "[Teszt #]" at the LogIn screen.
   static String actualVersion =         thisVersion;
   static String customer =              'Koat2';
@@ -62,8 +62,17 @@ class DataManager{
         mastercode =              data[appAction].toString().trim();
         break;
 
-      case AppAction.callElokezeles:
+      case AppAction.callKosarbaHelyezes:
         await DataManager(appAction: AppAction.callMastercode).beginCall;
+        var queryParameters = {
+          'customer':   customer,
+        };
+        Uri uriUrl =              Uri.parse('${urlPath}kosarba_helyezes.php');
+        http.Response response =  await http.post(uriUrl, body: json.encode(queryParameters), headers: headers);
+        data[appAction] =         (await jsonDecode(await jsonDecode(response.body)[0]['b']));
+        break;
+
+      case AppAction.callElokezeles:
         var queryParameters = {
           'customer':   customer,
         };
@@ -206,10 +215,20 @@ class DataManager{
         data[appAction] =         await jsonDecode(response.body);
         break;
 
-      case AppAction.callFinishElokezeles:
+      case AppAction.callFinishKosarbaHelyezes:
         var queryParameters = {
           'customer':   customer,
           'parameter':  jsonEncode(input['data'])
+        };
+        Uri uriUrl =              Uri.parse('${urlPath}finish_kosarba_helyezes.php');
+        http.Response response =  await http.post(uriUrl, body: json.encode(queryParameters), headers: headers);
+        data[appAction] =         await jsonDecode(response.body);
+        break;
+
+      case AppAction.callFinishElokezeles:
+        var queryParameters = {
+          'customer': customer,
+          'kosar':    input['kosar']
         };
         Uri uriUrl =              Uri.parse('${urlPath}finish_elokezeles.php');
         http.Response response =  await http.post(uriUrl, body: json.encode(queryParameters), headers: headers);
@@ -286,6 +305,7 @@ class DataManager{
       data[appAction] =   [];
     }
     catch(e) {
+      if(kDebugMode) dev.log('--------- $appAction --------- --------- --------- --------- --------- --------- ---------\n');
       if(kDebugMode) dev.log('########## ERROR ########## ########## ########## ########## ########## ########## ##########\n$e');
       data[appAction] =   [];
     }

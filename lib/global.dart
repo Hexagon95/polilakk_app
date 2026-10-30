@@ -8,10 +8,10 @@ import 'package:flutter/services.dart';
 import 'src/scanner_datawedge.dart';
 // ---------- < Enums > --- ---------- ---------- ---------- ----------
 enum AppAction{
-  routeLogIn, routeMenu, routeElokezeles, routeFestesreFelrakas, routePorfestes, routeMinosegellenorzes, routeFestesrolLeszedes, routeVedofoliazas,
-  callverzio, callLogInSecondTime, callElokezeles, callTermelesKosar, callFestesreFelrakas, callFestesrolLeszedes, callMastercode, callGerenda, callPorfestes, callMinosegellenorzes, callKalodaFelvitele, callCimke, callVedofoliazas,
+  routeLogIn, routeMenu, routeKosarbaHelyezes, routeElokezeles, routeFestesreFelrakas, routePorfestes, routeMinosegellenorzes, routeFestesrolLeszedes, routeVedofoliazas,
+  callverzio, callLogInSecondTime, callKosarbaHelyezes, callElokezeles, callTermelesKosar, callFestesreFelrakas, callFestesrolLeszedes, callMastercode, callGerenda, callPorfestes, callMinosegellenorzes, callKalodaFelvitele, callCimke, callVedofoliazas,
   callSelectKaloda, callSelectKalodaZarni,
-  callFinishElokezeles, callFinishTermelsKosar, callFinishFestesreFelrakas, callFinishGerenda, callFinishPorfestes, callFinishMinosegellenorzes, callFinishFestesrolLeszedes, callFinishKalodaZaras, callFinishVedofoliazas,
+  callFinishKosarbaHelyezes, callFinishElokezeles, callFinishTermelsKosar, callFinishFestesreFelrakas, callFinishGerenda, callFinishPorfestes, callFinishMinosegellenorzes, callFinishFestesrolLeszedes, callFinishKalodaZaras, callFinishVedofoliazas,
   default0, 
 }
 enum ButtonState{hidden, loading, disabled, error, default0}
@@ -28,6 +28,7 @@ class Global{
     switch (value) {
       case AppAction.routeLogIn:              _routes[check(0)] =   value;  break;
       case AppAction.routeMenu:               _routes[check(1)] =   value;  break;
+      case AppAction.routeKosarbaHelyezes:    _routes[check(2)] =   value;  break;
       case AppAction.routeElokezeles:         _routes[check(2)] =   value;  break;
       case AppAction.routeFestesreFelrakas:   _routes[check(2)] =   value;  break;
       case AppAction.routePorfestes:          _routes[check(2)] =   value;  break;

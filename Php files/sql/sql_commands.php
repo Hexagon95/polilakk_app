@@ -5,6 +5,7 @@ class SqlCommand{
 
     // ---------- <SQL Scripts> ------- ---------- ---------- ---------- ---------- ---------- ---------- ----------
     public function select_termelesFolyamat1()	            {return "SELECT * FROM [dbo].[Termeles_folyamat1] ()";}
+    public function select_termelesFolyamat1a()	            {return "SELECT b FROM [dbo].[Termeles_folyamat1a] ()";}
     public function select_termelesFolyamat2()	            {return "SELECT * FROM [dbo].[Termeles_folyamat2] ()";}
     public function select_termelesFolyamat3()	            {return "SELECT * FROM [dbo].[Termeles_folyamat3] ()";}
     public function select_termelesFolyamat4()	            {return "SELECT * FROM [dbo].[Termeles_folyamat4] ()";}
@@ -20,6 +21,7 @@ class SqlCommand{
     public function select_termelesFolyamat6KalodaCimke()   {return "SELECT b FROM [dbo].[Termeles_folyamat6_kaloda_cimke] (:id)";}
     public function select_verzio()                         {return "SELECT verzio_koat_app FROM [dbo].[Parameters]";}
     public function exec_termelesFolyamat1Felvitele()       {return "EXEC [dbo].[Termeles_folyamat1_felvitele] :parameter, :output";}
+    public function exec_termelesFolyamat1aFelvitele()      {return "EXEC [dbo].[Termeles_folyamat1a_felvitele] :parameter, :output";}
     public function exec_termelesFolyamat2Felvitele()       {return "EXEC [dbo].[Termeles_folyamat2_felvitele] :parameter, :output";}
     public function exec_termelesFolyamat3Felvitele()       {return "EXEC [dbo].[Termeles_folyamat3_felvitele] :parameter, :output";}
     public function exec_termelesFolyamat4Felvitele()       {return "EXEC [dbo].[Termeles_folyamat4_felvitele] :parameter, :output";}
