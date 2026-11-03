@@ -58,12 +58,27 @@ class RouteKosarbaHelyezesState extends State<RouteKosarbaHelyezes> {//---------
     for(dynamic item in rawData){
       String orderID   = '${item['rendeles']}|${item['szin']}';
       String packageID = item['package_id']?.toString() ?? '';
-
       result.putIfAbsent(orderID, () => {});
       result[orderID]!.putIfAbsent(packageID, () => []);
       result[orderID]![packageID]!.add(item);
     }
     return result;
+  }
+  bool _packageCompleted(List<dynamic> items) => items.every((item) => _setRecordStatus(item) != RStatus.default0);
+  bool _packageHasIssue(List<dynamic> items) => _packageCompleted(items) && items.any((item) => _setRecordStatus(item) != RStatus.done);
+  bool _orderCompleted(Map<String, List<dynamic>> packages) => packages.values.expand((items) => items).every((item) => _setRecordStatus(item) != RStatus.default0);
+  bool _orderHasIssue(Map<String, List<dynamic>> packages) => _orderCompleted(packages) && packages.values.any(_packageHasIssue);
+  List<MapEntry<String, Map<String, List<dynamic>>>> get displayOrders {
+    List<MapEntry<String, Map<String, List<dynamic>>>> regular = [];
+    List<MapEntry<String, Map<String, List<dynamic>>>> completedWithIssue = [];
+    for(final order in groupedData.entries){
+      if(_orderHasIssue(order.value)){
+        completedWithIssue.add(order);
+      }else{
+        regular.add(order);
+      }
+    }
+    return [...regular, ...completedWithIssue];
   }
   String? get activeOrder {
     if(index != null && (work == Work.basketIdScan || work == Work.basketItemPlacement)){
@@ -128,7 +143,7 @@ class RouteKosarbaHelyezesState extends State<RouteKosarbaHelyezes> {//---------
         controller: contentScrollController,
         padding:    const EdgeInsets.fromLTRB(6, 85, 6, 15),
         children: [
-          for(final order in groupedData.entries) ...[
+          for(final order in displayOrders) ...[
             _drawOrderCard(
               order.key,
               order.value,
@@ -226,30 +241,35 @@ class RouteKosarbaHelyezesState extends State<RouteKosarbaHelyezes> {//---------
     String orderID,
     Map<String, List<dynamic>> packages,
   ){
-    dynamic first =     packages.values.first.first;
-    bool isCompleted =  packages.values.expand((items) => items).every((item) => _setRecordStatus(item) != RStatus.default0);
-    bool isActive =     orderID == activeOrder;
+    dynamic first = packages.values.first.first;
+    bool isCompleted = _orderCompleted(packages);
+    bool hasIssue = _orderHasIssue(packages);
+    bool isActive = orderID == activeOrder;
     return AnimatedContainer(
       duration: const Duration(milliseconds: 250),
-      width:   double.infinity,
+      width: double.infinity,
       padding: const EdgeInsets.all(10),
       decoration: BoxDecoration(
         color: isCompleted
-          ? const Color(0xFFEAF8EE)
+          ? hasIssue
+            ? const Color(0xFFFFE8E8)
+            : const Color(0xFFEAF8EE)
           : const Color(0xFFFFFFFF),
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
           color: isCompleted
-            ? const Color(0xFF33AA55)
+            ? hasIssue
+              ? const Color(0xFFCC3333)
+              : const Color(0xFF33AA55)
             : isActive
               ? const Color(0xFF4444CC)
               : const Color(0x22000000),
           width: (isCompleted || isActive) ? 2 : 1,
         ),
         boxShadow: const [BoxShadow(
-          color:      Color(0x33000000),
+          color: Color(0x33000000),
           blurRadius: 8,
-          offset:     Offset(0, 3),
+          offset: Offset(0, 3),
         )],
       ),
       child: Column(
@@ -259,6 +279,7 @@ class RouteKosarbaHelyezesState extends State<RouteKosarbaHelyezes> {//---------
             first,
             isActive,
             isCompleted,
+            hasIssue,
           ),
           if(isActive) ...[
             const SizedBox(height: 12),
@@ -281,15 +302,24 @@ class RouteKosarbaHelyezesState extends State<RouteKosarbaHelyezes> {//---------
     dynamic item,
     bool isActive,
     bool isCompleted,
+    bool hasIssue,
   ) => Column(
     crossAxisAlignment: CrossAxisAlignment.start,
     children: [
       Row(children: [
-        if(isCompleted) ...[
+        if(isCompleted && !hasIssue) ...[
           const Icon(
             Icons.check_circle,
             color: Color(0xFF229944),
-            size:  25,
+            size: 25,
+          ),
+          const SizedBox(width: 6),
+        ]
+        else if(isCompleted && hasIssue) ...[
+          const Icon(
+            Icons.error_outline,
+            color: Color(0xFFCC3333),
+            size: 25,
           ),
           const SizedBox(width: 6),
         ]
@@ -297,17 +327,19 @@ class RouteKosarbaHelyezesState extends State<RouteKosarbaHelyezes> {//---------
           const Icon(
             Icons.play_arrow_rounded,
             color: Color(0xFF4444CC),
-            size:  25,
+            size: 25,
           ),
           const SizedBox(width: 4),
         ],
         Expanded(child: Text(
           _displayValue(item['rendeles']),
           style: TextStyle(
-            fontSize:   17,
+            fontSize: 17,
             fontWeight: FontWeight.bold,
             color: isCompleted
-              ? const Color(0xFF228844)
+              ? hasIssue
+                ? const Color(0xFFB52B2B)
+                : const Color(0xFF228844)
               : const Color(0xFF4444CC),
           ),
         )),
@@ -318,6 +350,7 @@ class RouteKosarbaHelyezesState extends State<RouteKosarbaHelyezes> {//---------
         'Megrendelő',
         _displayValue(item['partner_nev']),
         isCompleted: isCompleted,
+        hasIssue: hasIssue,
       ),
       const SizedBox(height: 6),
       _drawHeaderValue(
@@ -325,6 +358,7 @@ class RouteKosarbaHelyezesState extends State<RouteKosarbaHelyezes> {//---------
         'Szín',
         _displayValue(item['szin']),
         isCompleted: isCompleted,
+        hasIssue: hasIssue,
       ),
     ],
   );
@@ -334,14 +368,17 @@ class RouteKosarbaHelyezesState extends State<RouteKosarbaHelyezes> {//---------
     String title,
     String value, {
     bool isCompleted = false,
+    bool hasIssue = false,
   }) => Row(
     crossAxisAlignment: CrossAxisAlignment.start,
     children: [
       Icon(
         icon,
-        size:  18,
+        size: 18,
         color: isCompleted
-          ? const Color(0xFF229944)
+          ? hasIssue
+            ? const Color(0xFFCC3333)
+            : const Color(0xFF229944)
           : const Color(0xFF777777),
       ),
       const SizedBox(width: 6),
@@ -351,21 +388,21 @@ class RouteKosarbaHelyezesState extends State<RouteKosarbaHelyezes> {//---------
           Text(
             title.toUpperCase(),
             style: const TextStyle(
-              fontSize:    10,
-              fontWeight:  FontWeight.bold,
-              color:       Color(0xFF888888),
+              fontSize: 10,
+              fontWeight: FontWeight.bold,
+              color: Color(0xFF888888),
             ),
           ),
           const SizedBox(height: 2),
           Text(
             value,
-
             style: TextStyle(
-              fontSize:   13,
+              fontSize: 13,
               fontWeight: FontWeight.w600,
-
               color: isCompleted
-                ? const Color(0xFF228844)
+                ? hasIssue
+                  ? const Color(0xFFB52B2B)
+                  : const Color(0xFF228844)
                 : const Color(0xFF333333),
             ),
           ),
@@ -381,20 +418,28 @@ class RouteKosarbaHelyezesState extends State<RouteKosarbaHelyezes> {//---------
     String packageID,
     List<dynamic> items,
   ){
-    dynamic first =     items.first;
-    bool isCompleted =  items.every((item) => _setRecordStatus(item) != RStatus.default0);
-    bool isActive =     !isCompleted && orderID == activeOrder && packageID == activePackage;
+    dynamic first = items.first;
+    bool isCompleted = _packageCompleted(items);
+    bool hasIssue = _packageHasIssue(items);
+    bool isSuccessful = isCompleted && !hasIssue;
+    bool isActive = !isCompleted && orderID == activeOrder && packageID == activePackage;
     return AnimatedContainer(
-      key:        _packageKey(orderID, packageID),
-      duration:   const Duration(milliseconds: 250),
-      width:      double.infinity,
-      padding:    const EdgeInsets.all(10),
+      key: _packageKey(orderID, packageID),
+      duration: const Duration(milliseconds: 250),
+      width: double.infinity,
+      padding: const EdgeInsets.all(10),
       decoration: BoxDecoration(
-        color:        isCompleted ? const Color(0xFFDDF4E4) : const Color(0xFFF8F8FC),
+        color: isCompleted
+          ? hasIssue
+            ? const Color(0xFFFFE4E4)
+            : const Color(0xFFDDF4E4)
+          : const Color(0xFFF8F8FC),
         borderRadius: BorderRadius.circular(10),
         border: Border.all(
           color: isCompleted
-            ? const Color(0xFF33AA55)
+            ? hasIssue
+              ? const Color(0xFFCC3333)
+              : const Color(0xFF33AA55)
             : isActive
               ? const Color(0xFF7777DD)
               : const Color(0x22000000),
@@ -409,7 +454,9 @@ class RouteKosarbaHelyezesState extends State<RouteKosarbaHelyezes> {//---------
               Icons.inventory_2_outlined,
               size: 18,
               color: isCompleted
-                ? const Color(0xFF229944)
+                ? hasIssue
+                  ? const Color(0xFFCC3333)
+                  : const Color(0xFF229944)
                 : isActive
                   ? const Color(0xFF4444CC)
                   : const Color(0xFF666666),
@@ -418,23 +465,25 @@ class RouteKosarbaHelyezesState extends State<RouteKosarbaHelyezes> {//---------
             const Text(
               'CSOMAG',
               style: TextStyle(
-                fontSize:   10,
+                fontSize: 10,
                 fontWeight: FontWeight.bold,
-                color:      Color(0xFF888888),
+                color: Color(0xFF888888),
               ),
             ),
             const SizedBox(width: 8),
             Expanded(child: Text(
               _displayValue(first['package_id']),
               style: TextStyle(
-                fontSize:   14,
+                fontSize: 14,
                 fontWeight: FontWeight.bold,
                 color: isCompleted
-                  ? const Color(0xFF228844)
+                  ? hasIssue
+                    ? const Color(0xFFB52B2B)
+                    : const Color(0xFF228844)
                   : const Color(0xFF333333),
               ),
             )),
-            if(isCompleted)
+            if(isSuccessful)
               const Icon(
                 Icons.check_circle,
                 size: 22,
@@ -458,7 +507,7 @@ class RouteKosarbaHelyezesState extends State<RouteKosarbaHelyezes> {//---------
         ],
       ),
     );
-  }  
+  }
 
   Widget _drawArticleRow(dynamic item){
     RStatus rStatus = _setRecordStatus(item);

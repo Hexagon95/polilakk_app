@@ -59,7 +59,6 @@ class Global{
       content: Text(content, style: const TextStyle(fontSize: 12)),
       actions: [
         if(specialButton != null) specialButton,
-        if(specialButton != null) const Spacer(),
         okButton
       ]
     );
