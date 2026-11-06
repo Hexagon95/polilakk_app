@@ -20,6 +20,8 @@ class RouteFestesreFelrakasState extends State<RouteFestesreFelrakas> {//-------
 
   // ---------- [🌸 simple variables] --- ---------- ---------- ---------- ---------- ---------- ---------- ---------- ---------- ---------- ---------- //
   late double _contentWidth;
+  bool operationOngoing = false;
+  bool finalCheckOngoing = false;
 
   // ---------- [💎 complex variables] -- ---------- ---------- ---------- ---------- ---------- ---------- ---------- ---------- ---------- ---------- //
   Map<String, Map<String, List<dynamic>>> get groupedData{
@@ -133,7 +135,7 @@ class RouteFestesreFelrakasState extends State<RouteFestesreFelrakas> {//-------
     child: _drawBottomButton(
       text:      'Gerendák lezárása',
       icon:      Icons.view_stream_outlined,
-      onPressed: _buttonFinishGerendaPressed,
+      onPressed: operationOngoing || finalCheckOngoing ? null : _buttonFinishGerendaPressed,
     ),
   ));
 
@@ -295,7 +297,7 @@ class RouteFestesreFelrakasState extends State<RouteFestesreFelrakas> {//-------
       clipBehavior: Clip.none,
       children: [
         InkWell(
-          onTap: isProcessed ? null : () => selectItem(item),
+          onTap: isProcessed || operationOngoing || finalCheckOngoing ? null : () => selectItem(item),
           borderRadius: BorderRadius.circular(9),
           child: AnimatedContainer(
             duration: const Duration(milliseconds: 200),
@@ -399,7 +401,7 @@ class RouteFestesreFelrakasState extends State<RouteFestesreFelrakas> {//-------
               elevation: 7,
               shape: const CircleBorder(),
               child: InkWell(
-                onTap: () => undoRecord(item),
+                onTap: operationOngoing || finalCheckOngoing ? null : () => undoRecord(item),
                 customBorder: const CircleBorder(),
                 child: const SizedBox(
                   width: 34,
@@ -562,32 +564,43 @@ class RouteFestesreFelrakasState extends State<RouteFestesreFelrakas> {//-------
   }
 
   Future<void> selectItem(dynamic item) async{
-    if(_isProcessed(item)) return;
+    if(operationOngoing || finalCheckOngoing || _isProcessed(item)) return;
     int maxAmount = int.tryParse(item['mennyiseg']?.toString() ?? '') ?? 0;
     if(maxAmount <= 0) return;
-    Map<String, int>? result = await _itemStatusDialog(maxAmount);
-    if(result == null) return;
-    int amount = result['mennyiseg']!;
-    int status = result['ok']!;
-    int selectedIndex = rawData.indexWhere((rawItem) => identical(rawItem, item));
-    if(selectedIndex < 0 || !mounted) return;
-    int? beamID;
-    String? cabin;
-    if(status == 1){
-      Map<String, dynamic>? beamResult = await _gerendaDialog(item);
-      if(beamResult == null) return;
-      beamID = beamResult['gerenda_id'] as int;
-      cabin = beamResult['kabin']?.toString();
+    operationOngoing = true;
+    if(mounted) setState((){});
+    bool routeFinished = false;
+    try{
+      Map<String, int>? result = await _itemStatusDialog(maxAmount);
+      if(result == null) return;
+      int amount = result['mennyiseg']!;
+      int status = result['ok']!;
+      int selectedIndex = rawData.indexWhere((rawItem) => identical(rawItem, item));
+      if(selectedIndex < 0 || !mounted) return;
+      int? beamID;
+      String? cabin;
+      if(status == 1){
+        Map<String, dynamic>? beamResult = await _gerendaDialog(item);
+        if(beamResult == null) return;
+        beamID = beamResult['gerenda_id'] as int;
+        cabin = beamResult['kabin']?.toString();
+      }
+      if(!mounted) return;
+      setState(() => _stampRecord(
+        selectedIndex,
+        amount,
+        status,
+        beamID: beamID,
+        cabin: cabin,
+      ));
+      routeFinished = await finalCheck();
     }
-    if(!mounted) return;
-    setState(() => _stampRecord(
-      selectedIndex,
-      amount,
-      status,
-      beamID: beamID,
-      cabin: cabin,
-    ));
-    await finalCheck();
+    finally{
+      if(!routeFinished){
+        operationOngoing = false;
+        if(mounted) setState((){});
+      }
+    }
   }
 
   Future<Map<String, dynamic>?> _gerendaDialog(dynamic item) async{
@@ -735,70 +748,89 @@ class RouteFestesreFelrakasState extends State<RouteFestesreFelrakas> {//-------
   }
 
   Future<void> undoRecord(dynamic item) async{
-    if(!_isProcessed(item)) return;
-    if(!await Global.yesNoDialog(
-      context,
-      title: '⚠️ Visszavonás',
-      content: 'Visszavonja a tétel rögzítését?\n${item['cikkszam']}',
-      options: const ['Igen', 'Mégsem'],
-    )) return;
-    int itemIndex = rawData.indexWhere((rawItem) => identical(rawItem, item));
-    if(itemIndex < 0) return;
-    int cancelledAmount = int.tryParse(item['mennyiseg']?.toString() ?? '') ?? 0;
-    int remainingIndex = rawData.indexWhere((rawItem) =>
-      !identical(rawItem, item) &&
-      !_isProcessed(rawItem) &&
-      _sameRecord(rawItem, item)
-    );
-    setState((){
-      if(remainingIndex >= 0){
-        int remainingAmount = int.tryParse(rawData[remainingIndex]['mennyiseg']?.toString() ?? '') ?? 0;
-        rawData[remainingIndex]['mennyiseg'] = remainingAmount + cancelledAmount;
-        rawData.removeAt(itemIndex);
-      }else{
-        Map<String, dynamic> restoredItem = Map<String, dynamic>.from(item);
-        restoredItem.remove('gerenda_id');
-        restoredItem.remove('kabin');
-        restoredItem.remove('ok');
-        restoredItem.remove('time_stamp');
-        restoredItem.remove('user_id');
-        rawData[itemIndex] = restoredItem;
-      }
-    });
+    if(operationOngoing || finalCheckOngoing || !_isProcessed(item)) return;
+    operationOngoing = true;
+    if(mounted) setState((){});
+    try{
+      if(!await Global.yesNoDialog(
+        context,
+        title: '⚠️ Visszavonás',
+        content: 'Visszavonja a tétel rögzítését?\n${item['cikkszam']}',
+        options: const ['Igen', 'Mégsem'],
+      )) return;
+      int itemIndex = rawData.indexWhere((rawItem) => identical(rawItem, item));
+      if(itemIndex < 0) return;
+      int cancelledAmount = int.tryParse(item['mennyiseg']?.toString() ?? '') ?? 0;
+      int remainingIndex = rawData.indexWhere((rawItem) =>
+        !identical(rawItem, item) &&
+        !_isProcessed(rawItem) &&
+        _sameRecord(rawItem, item)
+      );
+      setState((){
+        if(remainingIndex >= 0){
+          int remainingAmount = int.tryParse(rawData[remainingIndex]['mennyiseg']?.toString() ?? '') ?? 0;
+          rawData[remainingIndex]['mennyiseg'] = remainingAmount + cancelledAmount;
+          rawData.removeAt(itemIndex);
+        }else{
+          Map<String, dynamic> restoredItem = Map<String, dynamic>.from(item);
+          restoredItem.remove('gerenda_id');
+          restoredItem.remove('kabin');
+          restoredItem.remove('ok');
+          restoredItem.remove('time_stamp');
+          restoredItem.remove('user_id');
+          rawData[itemIndex] = restoredItem;
+        }
+      });
+    }
+    finally{
+      operationOngoing = false;
+      if(mounted) setState((){});
+    }
   }
 
   Future<void> _buttonFinishGerendaPressed() async{
-    await DataManager(
-      appAction: AppAction.callFinishFestesreFelrakas,
-      input:     {'data': rawData},
-    ).beginCall;
-    dataGerenda = await DataManager(appAction: AppAction.callGerenda).beginCall;
-    List<Map<String, dynamic>> openGerenda = [];
-    for(dynamic gerenda in dataGerenda){
-      String cikkszam = gerenda['cikkszam']?.toString() ?? '';
-      if(gerenda['lezarva']?.toString() == '1' || cikkszam.isEmpty || cikkszam == '0') continue;
-      int articleIndex = rawData.indexWhere((item) => item['cikkszam']?.toString() == cikkszam);
-      dynamic article = articleIndex < 0 ? null : rawData[articleIndex];
-      openGerenda.add({
-        'id':       gerenda['id'],
-        'cikkszam': gerenda['cikkszam'],
-        'picture':  article?['picture'],
-      });
-    }
-    Map<String, dynamic>? selectedGerenda = await _selectGerendaToCloseDialog(openGerenda);
-    if(selectedGerenda == null) return;
-    dynamic message = await DataManager(appAction: AppAction.callFinishGerenda, input: {
-      'id':       selectedGerenda['id'],
-      'user_id':  DataManager.userID
-    }).beginCall;
-    String cleanMessage = message.toString().replaceAll(RegExp(r'[\[\]]'), '').trim();
-    await Global.showAlertDialog(context,
-      title:    cleanMessage.isEmpty ? 'ℹ️ Gerenda Lezárva!' : '⚠️ Hiba!',
-      content:  cleanMessage.isEmpty ? '✅' : cleanMessage
-    );
-    dataGerenda = await DataManager(appAction: AppAction.callGerenda).beginCall;
-    if(cleanMessage.isEmpty){
+    if(operationOngoing || finalCheckOngoing) return;
+    operationOngoing = true;
+    if(mounted) setState((){});
+    try{
+      await DataManager(
+        appAction: AppAction.callFinishFestesreFelrakas,
+        input:     {'data': rawData},
+      ).beginCall;
       rawData = await DataManager(appAction: AppAction.callFestesreFelrakas).beginCall;
+      if(mounted) setState((){});
+      dataGerenda = await DataManager(appAction: AppAction.callGerenda).beginCall;
+      List<Map<String, dynamic>> openGerenda = [];
+      for(dynamic gerenda in dataGerenda){
+        String cikkszam = gerenda['cikkszam']?.toString() ?? '';
+        if(gerenda['lezarva']?.toString() == '1' || cikkszam.isEmpty || cikkszam == '0') continue;
+        int articleIndex = rawData.indexWhere((item) => item['cikkszam']?.toString() == cikkszam);
+        dynamic article = articleIndex < 0 ? null : rawData[articleIndex];
+        openGerenda.add({
+          'id':       gerenda['id'],
+          'cikkszam': gerenda['cikkszam'],
+          'picture':  article?['picture'],
+        });
+      }
+      Map<String, dynamic>? selectedGerenda = await _selectGerendaToCloseDialog(openGerenda);
+      if(selectedGerenda == null) return;
+      dynamic message = await DataManager(appAction: AppAction.callFinishGerenda, input: {
+        'id':       selectedGerenda['id'],
+        'user_id':  DataManager.userID
+      }).beginCall;
+      String cleanMessage = message.toString().replaceAll(RegExp(r'[\[\]]'), '').trim();
+      await Global.showAlertDialog(context,
+        title:    cleanMessage.isEmpty ? 'ℹ️ Gerenda Lezárva!' : '⚠️ Hiba!',
+        content:  cleanMessage.isEmpty ? '✅' : cleanMessage
+      );
+      dataGerenda = await DataManager(appAction: AppAction.callGerenda).beginCall;
+      if(cleanMessage.isEmpty){
+        rawData = await DataManager(appAction: AppAction.callFestesreFelrakas).beginCall;
+        if(mounted) setState((){});
+      }
+    }
+    finally{
+      operationOngoing = false;
       if(mounted) setState((){});
     }
   }
@@ -924,18 +956,30 @@ class RouteFestesreFelrakasState extends State<RouteFestesreFelrakas> {//-------
   }
 
   Future<void> handlePop() async{
-    if(await Global.yesNoDialog(
-      context,
-      title:    '⚠️ Kilépés',
-      content:  'Félbe kívánja szakítani a Festésre felrakást?',
-      options:  const ['Igen', 'Mégsem'],
-    )){
+    if(operationOngoing || finalCheckOngoing) return;
+    operationOngoing = true;
+    if(mounted) setState((){});
+    bool routeFinished = false;
+    try{
+      if(!await Global.yesNoDialog(
+        context,
+        title:    '⚠️ Kilépés',
+        content:  'Félbe kívánja szakítani a Festésre felrakást?',
+        options:  const ['Igen', 'Mégsem'],
+      )) return;
       await DataManager(
         appAction: AppAction.callFinishFestesreFelrakas,
         input:     {'data': rawData},
       ).beginCall;
       Global.routeBack;
+      routeFinished = true;
       if(mounted) Navigator.pop(context);
+    }
+    finally{
+      if(!routeFinished){
+        operationOngoing = false;
+        if(mounted) setState((){});
+      }
     }
   }
 
@@ -951,17 +995,27 @@ class RouteFestesreFelrakasState extends State<RouteFestesreFelrakas> {//-------
   
   Future<bool> finalCheck() async{
     if(rawData.any((item) => !_isProcessed(item))) return false;
-    await DataManager(
-      appAction: AppAction.callFinishFestesreFelrakas,
-      input:     {'data': rawData},
-    ).beginCall;
-    await Global.showAlertDialog(
-      context,
-      title:   'ℹ️ Festésre felrakás befejezve!',
-      content: 'Nincs több teendő!',
-    );
-    Global.routeBack;
-    if(mounted) Navigator.pop(context);
-    return true;
+    if(finalCheckOngoing) return true;
+    finalCheckOngoing = true;
+    if(mounted) setState((){});
+    try{
+      await DataManager(
+        appAction: AppAction.callFinishFestesreFelrakas,
+        input:     {'data': rawData},
+      ).beginCall;
+      await Global.showAlertDialog(
+        context,
+        title:   'ℹ️ Festésre felrakás befejezve!',
+        content: 'Nincs több teendő!',
+      );
+      Global.routeBack;
+      if(mounted) Navigator.pop(context);
+      return true;
+    }
+    catch(e){
+      finalCheckOngoing = false;
+      if(mounted) setState((){});
+      rethrow;
+    }
   }
 }

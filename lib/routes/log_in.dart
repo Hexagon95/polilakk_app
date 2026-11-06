@@ -16,6 +16,7 @@ class LogInMenuState extends State<LogInMenuFrame> {//---------- ---------- ----
   late double _contentWidth;
   int otaProgress =                   0;
   bool updateNeeded =                 false;
+  bool _isLoginPressed =              false;
 
   // ---------- [💎 complex variables] -- ---------- ---------- ---------- ---------- ---------- ---------- ---------- ---------- ---------- ---------- //
   final OtaPlugin otaPlugin =         OtaPlugin();
@@ -81,7 +82,7 @@ class LogInMenuState extends State<LogInMenuFrame> {//---------- ---------- ----
   ]);
 
   Widget get _drawLogInButton => SizedBox(width: double.infinity, height: 48, child: ElevatedButton(
-    onPressed: updateNeeded ? null : _logInPressed,
+    onPressed: (updateNeeded || _isLoginPressed) ? null : _logInPressed,
     style: ElevatedButton.styleFrom(
       backgroundColor: const Color.fromRGBO(47, 37, 135, 1),
       foregroundColor: Colors.white,
@@ -102,16 +103,25 @@ class LogInMenuState extends State<LogInMenuFrame> {//---------- ---------- ----
 
   // ---------- < Methods [1] > --------- ---------- ---------- ---------- ---------- ---------- ---------- ---------- ---------- ---------- ---------- //
   Future<void> _logInPressed() async{
-    await DataManager(appAction: AppAction.callverzio).beginCall;
-    if(DataManager.actualVersion != DataManager.thisVersion){
-      setState(() => updateNeeded = true);
-      await tryOtaUpdate();
-      return;
+    if(_isLoginPressed) return;
+    setState(() => _isLoginPressed = true);
+    try{
+      await DataManager(appAction: AppAction.callverzio).beginCall;
+      if(!mounted) return;
+      if(DataManager.actualVersion != DataManager.thisVersion){
+        setState(() => updateNeeded = true);
+        await tryOtaUpdate();
+        return;
+      }
+      dynamic result = await Global.logInDialog(context);
+      if(kDebugMode) print(result.toString());
+      if(!mounted) return;
+      Global.routeNext = AppAction.routeMenu;
+      await Navigator.pushNamed(context, '/menu');
     }
-    dynamic result = await Global.logInDialog(context);
-    if(kDebugMode) print(result.toString());
-    Global.routeNext = AppAction.routeMenu;
-    await Navigator.pushNamed(context, '/menu');
+    finally{
+      if(mounted) setState(() => _isLoginPressed = false);
+    }
   }
 
   Future<void> tryOtaUpdate() async{

@@ -14,6 +14,7 @@ class RouteFestesrolLeszedesState extends State<RouteFestesrolLeszedes> {//-----
   static List<dynamic> rawData =    [];
   // ---------- [🌸 simple variables] --- ---------- ---------- ---------- ---------- ---------- ---------- ---------- ---------- ---------- ---------- //
   late double _contentWidth;
+  bool operationOngoing = false;
   // ---------- < WidgetBuild [0] > ----- ---------- ---------- ---------- ---------- ---------- ---------- ---------- ---------- ---------- ---------- //
   @override
   Widget build(BuildContext context){
@@ -79,7 +80,7 @@ class RouteFestesrolLeszedesState extends State<RouteFestesrolLeszedes> {//-----
     child: _drawBottomButton(
       text: 'Kalodák lezárása',
       icon: Icons.inventory_2_outlined,
-      onPressed: _buttonFinishKalodaPressed,
+      onPressed: operationOngoing ? null : _buttonFinishKalodaPressed,
     ),
   ));
   Widget _drawBottomButton({
@@ -200,7 +201,7 @@ class RouteFestesrolLeszedesState extends State<RouteFestesrolLeszedes> {//-----
     int kalodaId = int.tryParse(item['kaloda_id']?.toString() ?? '') ?? 0;
     bool hasKaloda = kalodaId > 0;
     return InkWell(
-      onTap: () => selectItem(item),
+      onTap: operationOngoing ? null : () => selectItem(item),
       borderRadius: BorderRadius.circular(10),
       child: Container(
         width: double.infinity,
@@ -355,47 +356,71 @@ class RouteFestesrolLeszedesState extends State<RouteFestesrolLeszedes> {//-----
 
   // ---------- < Methods [1] > --------- ---------- ---------- ---------- ---------- ---------- ---------- ---------- ---------- ---------- ---------- //
   Future<void> _exitRoute() async{
-    bool? save = await showDialog<bool>(
-      context: context,
-      barrierDismissible: false,
-      builder: (dialogContext) => AlertDialog(
-        title: const Text('Mentés és kilépés'),
-        content: const Text('Szeretnéd menteni a módosításokat és kilépni?'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(dialogContext, true),
-            child: const Text('Igen'),
-          ),
-          TextButton(
-            onPressed: () => Navigator.pop(dialogContext, false),
-            child: const Text('Mégsem'),
-          ),
-        ],
-      ),
-    );
-    if(save != true) return;
-    await DataManager(
-      appAction: AppAction.callFinishFestesrolLeszedes,
-      input: {'data': rawData},
-    ).beginCall;
-    if(!mounted) return;
-    Global.routeBack;
-    Navigator.pop(context);
+    if(operationOngoing) return;
+    operationOngoing = true;
+    if(mounted) setState((){});
+    bool routeFinished = false;
+    try{
+      bool? save = await showDialog<bool>(
+        context: context,
+        barrierDismissible: false,
+        builder: (dialogContext) => AlertDialog(
+          title: const Text('Mentés és kilépés'),
+          content: const Text('Szeretnéd menteni a módosításokat és kilépni?'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext, true),
+              child: const Text('Igen'),
+            ),
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext, false),
+              child: const Text('Mégsem'),
+            ),
+          ],
+        ),
+      );
+      if(save != true) return;
+      await DataManager(
+        appAction: AppAction.callFinishFestesrolLeszedes,
+        input: {'data': rawData},
+      ).beginCall;
+      if(!mounted) return;
+      Global.routeBack;
+      routeFinished = true;
+      Navigator.pop(context);
+    }
+    finally{
+      if(!routeFinished){
+        operationOngoing = false;
+        if(mounted) setState((){});
+      }
+    }
   }
+
   String _displayValue(dynamic value){
     if(value == null || value.toString().trim().isEmpty) return '-';
     return value.toString();
   }
   Future<void> selectItem(dynamic item) async{
-    List<dynamic> selectList = await DataManager(appAction: AppAction.callSelectKaloda, input: {
-      'vedofoliazas': item['vedofoliazas'],
-      'gorgozes':     item['gorgozes']
-    }).beginCall;
-    if(!mounted) return;
-    Map<String, dynamic>? result = await _showRecordDialog(item, selectList);
-    if(result == null) return;
-    _assignKaloda(item, result['mennyiseg'], result['kaloda_id']);
+    if(operationOngoing) return;
+    operationOngoing = true;
+    if(mounted) setState((){});
+    try{
+      List<dynamic> selectList = await DataManager(appAction: AppAction.callSelectKaloda, input: {
+        'vedofoliazas': item['vedofoliazas'],
+        'gorgozes':     item['gorgozes']
+      }).beginCall;
+      if(!mounted) return;
+      Map<String, dynamic>? result = await _showRecordDialog(item, selectList);
+      if(result == null) return;
+      _assignKaloda(item, result['mennyiseg'], result['kaloda_id']);
+    }
+    finally{
+      operationOngoing = false;
+      if(mounted) setState((){});
+    }
   }
+
   Future<Map<String, dynamic>?> _showRecordDialog(dynamic item, List<dynamic> selectList) async{
     TextEditingController amountController = TextEditingController();
     int maxAmount = int.tryParse(item['mennyiseg']?.toString() ?? '') ?? 0;
@@ -552,33 +577,43 @@ class RouteFestesrolLeszedesState extends State<RouteFestesrolLeszedes> {//-----
   }
   
   Future<void> _buttonFinishKalodaPressed() async{
-    await DataManager(appAction: AppAction.callFinishFestesrolLeszedes, input:{
-      'data': rawData
-    }).beginCall;
-    dataKaloda = await DataManager(appAction: AppAction.callSelectKalodaZarni).beginCall;
-    List<Map<String, dynamic>> openKaloda = dataKaloda.map<Map<String, dynamic>>((item) => Map<String, dynamic>.from(item)).toList();
-    Map<String, dynamic>? selectedKaloda = await _selectKalodaToCloseDialog(openKaloda);
-    if(selectedKaloda == null) return;
-    dynamic message = await DataManager(appAction: AppAction.callFinishKalodaZaras, input:{
-      'id': selectedKaloda['kaloda'], 'user_id': DataManager.userID
-    }).beginCall;
-    if(!mounted) return;
-    String cleanMessage = message.toString().replaceAll(RegExp(r'[\[\]]'), '').trim();
-    await Global.showAlertDialog(
-      context,
-      title:    cleanMessage.isEmpty? 'ℹ️ Kaloda lezárva!' : '⚠️ Hiba!',
-      content:  cleanMessage.isEmpty? '✅' : cleanMessage
-    );
-    if(cleanMessage.isEmpty){
-      await DataManager(appAction: AppAction.callCimke, input: {'id': selectedKaloda['kaloda']}).beginCall;
+    if(operationOngoing) return;
+    operationOngoing = true;
+    if(mounted) setState((){});
+    try{
+      await DataManager(appAction: AppAction.callFinishFestesrolLeszedes, input:{
+        'data': rawData
+      }).beginCall;
       dataKaloda = await DataManager(appAction: AppAction.callSelectKalodaZarni).beginCall;
-      rawData = await DataManager(appAction: AppAction.callFestesrolLeszedes).beginCall;
+      List<Map<String, dynamic>> openKaloda = dataKaloda.map<Map<String, dynamic>>((item) => Map<String, dynamic>.from(item)).toList();
+      Map<String, dynamic>? selectedKaloda = await _selectKalodaToCloseDialog(openKaloda);
+      if(selectedKaloda == null) return;
+      dynamic message = await DataManager(appAction: AppAction.callFinishKalodaZaras, input:{
+        'id': selectedKaloda['kaloda'], 'user_id': DataManager.userID
+      }).beginCall;
+      if(!mounted) return;
+      String cleanMessage = message.toString().replaceAll(RegExp(r'[\[\]]'), '').trim();
+      await Global.showAlertDialog(
+        context,
+        title:    cleanMessage.isEmpty? 'ℹ️ Kaloda lezárva!' : '⚠️ Hiba!',
+        content:  cleanMessage.isEmpty? '✅' : cleanMessage
+      );
+      if(cleanMessage.isEmpty){
+        await DataManager(appAction: AppAction.callCimke, input: {'id': selectedKaloda['kaloda']}).beginCall;
+        dataKaloda = await DataManager(appAction: AppAction.callSelectKalodaZarni).beginCall;
+        rawData = await DataManager(appAction: AppAction.callFestesrolLeszedes).beginCall;
+        if(mounted) setState((){});
+      }
+    }
+    finally{
+      operationOngoing = false;
       if(mounted) setState((){});
     }
   }
 
   Future<Map<String, dynamic>?> _selectKalodaToCloseDialog(List<Map<String, dynamic>> items) async{
     int? selectedIndex;
+    bool confirmOngoing = false;
     return await showDialog<Map<String, dynamic>>(
       context: context,
       barrierDismissible: false,
@@ -747,16 +782,19 @@ class RouteFestesrolLeszedesState extends State<RouteFestesrolLeszedes> {//-----
             ),
             if(items.isNotEmpty)
               FilledButton(
-                onPressed: selectedIndex == null ? null : () async{
+                onPressed: selectedIndex == null || confirmOngoing ? null : () async{
+                  setDialogState(() => confirmOngoing = true);
                   bool confirm = await Global.yesNoDialog(
                     context,
                     title: '⚠️ Megerősítés',
                     content: 'Megerősíti a ${items[selectedIndex!]['kaloda']}. kaloda lezárását?',
                   );
-                  if(!confirm) return;
-                  if(dialogContext.mounted){
-                    Navigator.pop(dialogContext, items[selectedIndex!]);
+                  if(!dialogContext.mounted) return;
+                  if(!confirm){
+                    setDialogState(() => confirmOngoing = false);
+                    return;
                   }
+                  Navigator.pop(dialogContext, items[selectedIndex!]);
                 },
                 style: FilledButton.styleFrom(
                   backgroundColor: const Color(0xFF2F2587),

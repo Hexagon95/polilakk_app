@@ -12,7 +12,7 @@ class DataManager{
   void get bookMarks {beginCall;}
 
   // ---------- [⚡️ static variables] --- ---------- ---------- ---------- ---------- ---------- ---------- ---------- ---------- ---------- ---------- //
-  static const String thisVersion =     '1.8a';
+  static const String thisVersion =     '1.8b';
   static int verzioTest =               0;            // <--- Anything other than 0 will draw "[Teszt #]" at the LogIn screen.
   static String actualVersion =         thisVersion;
   static String customer =              'Koat2';

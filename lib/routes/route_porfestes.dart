@@ -17,6 +17,8 @@ class RoutePorfestesState extends State<RoutePorfestes> {//---------- ----------
 
   // ---------- [🌸 simple variables] --- ---------- ---------- ---------- ---------- ---------- ---------- ---------- ---------- ---------- ---------- //
   late double _contentWidth;
+  bool operationOngoing = false;
+  String? startingGerendaID;
 
   // ---------- < WidgetBuild [0] > ----- ---------- ---------- ---------- ---------- ---------- ---------- ---------- ---------- ---------- ---------- //
   @override
@@ -106,7 +108,7 @@ class RoutePorfestesState extends State<RoutePorfestes> {//---------- ----------
     return Material(
       color: Colors.transparent,
       child: InkWell(
-        onTap: isPainting ? null : () => selectGerenda(item),
+        onTap: isPainting || operationOngoing ? null : () => selectGerenda(item),
         borderRadius: BorderRadius.circular(12),
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 200),
@@ -228,19 +230,35 @@ class RoutePorfestesState extends State<RoutePorfestes> {//---------- ----------
   }
 
   Future<void> selectGerenda(dynamic item) async{
+    String gerendaID = item['gerenda_id']?.toString() ?? '';
+    if(operationOngoing) return;
     if(item['festes_alatt']?.toString() == '1') return;
-    String? scannedCode = await _porfestesScanDialog(item);
-    if(scannedCode == null || scannedCode.isEmpty) return;
-    if(!mounted) return;
-    setState((){
-      item['festes_alatt'] =  1;
-      item['festes_porkod'] = scannedCode;
-      item['time_stamp'] =    DateFormat('yyyy-MM-dd HH:mm:ss').format(DateTime.now());
-      item['user_id'] =       DataManager.userID;
-    });
-    await DataManager(appAction: AppAction.callFinishPorfestes, input: {'data': rawData}).beginCall;
-    rawData = await DataManager(appAction: AppAction.callPorfestes).beginCall;
-    setState((){});
+    if(gerendaID.isEmpty) return;
+    operationOngoing = true;
+    startingGerendaID = gerendaID;
+    if(mounted) setState((){});
+    try{
+      String? scannedCode = await _porfestesScanDialog(item);
+      if(scannedCode == null || scannedCode.isEmpty) return;
+      if(!mounted) return;
+      setState((){
+        item['festes_alatt'] =  1;
+        item['festes_porkod'] = scannedCode;
+        item['time_stamp'] =    DateFormat('yyyy-MM-dd HH:mm:ss').format(DateTime.now());
+        item['user_id'] =       DataManager.userID;
+      });
+      await DataManager(
+        appAction: AppAction.callFinishPorfestes,
+        input: {'data': rawData},
+      ).beginCall;
+      rawData = await DataManager(appAction: AppAction.callPorfestes).beginCall;
+      if(mounted) setState((){});
+    }
+    finally{
+      startingGerendaID = null;
+      operationOngoing = false;
+      if(mounted) setState((){});
+    }
   }
 
   Future<String?> _porfestesScanDialog(dynamic item) async{
@@ -249,11 +267,14 @@ class RoutePorfestesState extends State<RoutePorfestes> {//---------- ----------
       scannerDatas: scannerDatas,
       profileName:  'Dialog',
     );
+    final ValueNotifier<bool> submitOngoing = ValueNotifier(false);
     String? result = await showDialog<String>(
       context: context,
       barrierDismissible: false,
-      builder: (dialogContext) => AlertDialog(
-        titlePadding:   const EdgeInsets.fromLTRB(18, 18, 18, 8),
+      builder: (dialogContext) => StatefulBuilder(
+        builder: (context, setDialogState){
+          return AlertDialog(
+            titlePadding:   const EdgeInsets.fromLTRB(18, 18, 18, 8),
         contentPadding: const EdgeInsets.fromLTRB(20, 10, 20, 8),
         backgroundColor: Colors.white,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
@@ -321,19 +342,34 @@ class RoutePorfestesState extends State<RoutePorfestes> {//---------- ----------
                 SizedBox(
                   width:  double.infinity,
                   height: 54,
-                  child: ElevatedButton.icon(
-                    onPressed: scannedText.isEmpty ? null : () => Navigator.pop(dialogContext, scannedText),
-                    icon: const Icon(Icons.play_arrow_rounded, size: 25),
-                    label: const Text(
-                      'Porfestés Megkezdése',
-                      style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
-                    ),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor:         const Color(0xFF2F2587),
-                      foregroundColor:         Colors.white,
-                      disabledBackgroundColor: const Color(0xFFE0E0E0),
-                      disabledForegroundColor: const Color(0xFF999999),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                  child: ValueListenableBuilder<bool>(
+                    valueListenable: submitOngoing,
+                    builder: (context, isSubmitting, child) => ElevatedButton.icon(
+                      onPressed: scannedText.isEmpty || isSubmitting ? null : (){
+                        submitOngoing.value = true;
+                        Navigator.pop(dialogContext, scannedText);
+                      },
+                      icon: isSubmitting
+                        ? const SizedBox(
+                            width: 20,
+                            height: 20,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                            ),
+                          )
+                        : const Icon(Icons.play_arrow_rounded, size: 25),
+                      label: Text(
+                        isSubmitting ? 'Indítás...' : 'Porfestés Megkezdése',
+                        style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
+                      ),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor:         const Color(0xFF2F2587),
+                        foregroundColor:         Colors.white,
+                        disabledBackgroundColor: const Color(0xFFE0E0E0),
+                        disabledForegroundColor: const Color(0xFF999999),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                      ),
                     ),
                   ),
                 ),
@@ -341,28 +377,44 @@ class RoutePorfestesState extends State<RoutePorfestes> {//---------- ----------
             );
           },
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(dialogContext),
-            child: const Text('Mégse'),
-          ),
-        ],
+            actions: [
+              TextButton(
+                onPressed: submitOngoing.value ? null : () => Navigator.pop(dialogContext),
+                child: const Text('Mégse'),
+              ),
+            ],
+          );
+        },
       ),
     );
     scannerDatawedge.dispose();
     scannerDatas.dispose();
+    submitOngoing.dispose();
     return result;
   }
 
   Future<void> handlePop() async{
-    if(await Global.yesNoDialog(
-      context,
-      title:    '⚠️ Kilépés',
-      content:  'Félbe kívánja szakítani a Porfestést?',
-      options:  const ['Igen', 'Mégsem'],
-    )){
+    if(operationOngoing) return;
+    operationOngoing = true;
+    if(mounted) setState((){});
+    bool routeFinished = false;
+    try{
+      if(!await Global.yesNoDialog(
+        context,
+        title:    '⚠️ Kilépés',
+        content:  'Félbe kívánja szakítani a Porfestést?',
+        options:  const ['Igen', 'Mégsem'],
+      )) return;
       Global.routeBack;
+      routeFinished = true;
       if(mounted) Navigator.pop(context);
     }
+    finally{
+      if(!routeFinished){
+        operationOngoing = false;
+        if(mounted) setState((){});
+      }
+    }
   }
+
 }

@@ -24,6 +24,8 @@ class RouteKosarbaHelyezesState extends State<RouteKosarbaHelyezes> {//---------
 
   // ---------- [🌸 simple variables] --- ---------- ---------- ---------- ---------- ---------- ---------- ---------- ---------- ---------- ---------- //
   bool scanOngoing = false;
+  bool operationOngoing = false;
+  bool finalCheckOngoing = false;
   List<dynamic>? rawDataBeforeOverride;
   ValueNotifier<ScannerDatas>? scannerDatas;
   ScannerDatawedge? scannerDatawedge;
@@ -221,19 +223,19 @@ class RouteKosarbaHelyezesState extends State<RouteKosarbaHelyezes> {//---------
   Widget get _drawFinishBasket => _drawBottomButton(
     text:      'Kosarak Lezárása',
     icon:      Icons.shopping_basket,
-    onPressed: _buttonFinishBasketPressed, //buttonMaterialNotFoundPressed,
+    onPressed: operationOngoing || finalCheckOngoing ? null : _buttonFinishBasketPressed,
   );
 
   Widget get _drawButtonEnterBasketID => _drawBottomButton(
     text:      'Megadás billentyűzettel',
     icon:      Icons.keyboard,
-    onPressed: buttonEnterBasketIDPressed,
+    onPressed: operationOngoing || finalCheckOngoing ? null : buttonEnterBasketIDPressed,
   );
 
   Widget get _drawButtonPlacementComplete => _drawBottomButton(
     text:      'Kosárba helyeztem',
     icon:      Icons.done,
-    onPressed: buttonPlacementCompletePressed,
+    onPressed: operationOngoing || finalCheckOngoing ? null : buttonPlacementCompletePressed,
   );
 
   // ---------- < WidgetBuild [2] > ----- ---------- ---------- ---------- ---------- ---------- ---------- ---------- ---------- ---------- ---------- //
@@ -539,7 +541,7 @@ class RouteKosarbaHelyezesState extends State<RouteKosarbaHelyezes> {//---------
       clipBehavior: Clip.none,
       children: [
         InkWell(
-          onTap: isSelectable ? () => selectItem(item) : null,
+          onTap: isSelectable && !operationOngoing && !finalCheckOngoing ? () => selectItem(item) : null,
           borderRadius: BorderRadius.circular(9),
           child: AnimatedContainer(
             duration: const Duration(milliseconds: 200),
@@ -668,7 +670,7 @@ class RouteKosarbaHelyezesState extends State<RouteKosarbaHelyezes> {//---------
               elevation: 7,
               shape: const CircleBorder(),
               child: InkWell(
-                onTap: () => undoRecord(item),
+                onTap: operationOngoing || finalCheckOngoing ? null : () => undoRecord(item),
                 customBorder: const CircleBorder(),
                 child: const SizedBox(width: 34, height: 34, child: Icon(Icons.close, color: Color(0xFFFFFFFF), size: 22)),
               ),
@@ -929,10 +931,13 @@ class RouteKosarbaHelyezesState extends State<RouteKosarbaHelyezes> {//---------
   }
 
   Future<void> selectItem(dynamic item) async{
-    if(!_isSelectableItem(item)) return;
+    if(operationOngoing || finalCheckOngoing || !_isSelectableItem(item)) return;
     int maxAmount = int.tryParse(item['mennyiseg']?.toString() ?? '') ?? 0;
     if(maxAmount <= 0) return;
+    operationOngoing = true;
     scanOngoing = true;
+    if(mounted) setState((){});
+    bool routeFinished = false;
     try{
       Map<String, int>? result = await _itemStatusDialog(maxAmount);
       if(result == null) return;
@@ -954,7 +959,8 @@ class RouteKosarbaHelyezesState extends State<RouteKosarbaHelyezes> {//---------
         if(mounted) setState(() => _work = Work.basketIdScan);
         return;
       }
-      if(await finalCheck()) return;
+      routeFinished = await finalCheck();
+      if(routeFinished) return;
       if(!mounted) return;
       bool packageCompleted =
         orderBefore != null &&
@@ -979,21 +985,40 @@ class RouteKosarbaHelyezesState extends State<RouteKosarbaHelyezes> {//---------
     }
     finally{
       scanOngoing = false;
+      if(!routeFinished){
+        operationOngoing = false;
+        if(mounted) setState((){});
+      }
     }
   }
 
   Future<void> buttonQrNotReadablePressed() async{
-    if(index == null) return;
+    if(operationOngoing || finalCheckOngoing || index == null) return;
     setState(() => setWork());
   }
 
   Future<void> _buttonFinishBasketPressed() async{
+    if(operationOngoing || finalCheckOngoing) return;
+    operationOngoing = true;
+    if(mounted) setState((){});
     try{
       String? orderBeforeRefresh = activeOrder;
       await DataManager(
         appAction: AppAction.callFinishKosarbaHelyezes,
         input:     {'data': completedData},
       ).beginCall;
+      rawData = await DataManager(appAction: AppAction.callKosarbaHelyezes).beginCall;
+      if(orderBeforeRefresh != null) _prioritizeOrder(orderBeforeRefresh);
+      rawDataBeforeOverride = null;
+      if(!mounted) return;
+      setState((){
+        _index            = null;
+        selectedAmount    = null;
+        selectedStatus    = null;
+        basketID          = null;
+        selectedPackageID = null;
+        _work             = rawData.isEmpty ? Work.default0 : Work.packageIdScan;
+      });
       List<Map<String, dynamic>>? result = await Global.selectItemsFromListDialog(context,
         items:          List<Map<String, dynamic>>.from(await DataManager(appAction: AppAction.callTermelesKosar).beginCall),
         title:          'ℹ️ Válassza ki a lezárandó kosarakat!',
@@ -1036,27 +1061,22 @@ class RouteKosarbaHelyezesState extends State<RouteKosarbaHelyezes> {//---------
           title:    cleanMessage.isEmpty ? 'ℹ️ Kosarak Lezárva!' : '⚠️ Hiba!',
           content:  cleanMessage.isEmpty ? '✅' : cleanMessage
         );
+        rawData = await DataManager(appAction: AppAction.callKosarbaHelyezes).beginCall;
+        if(orderBeforeRefresh != null) _prioritizeOrder(orderBeforeRefresh);
+        if(mounted) setState((){});
       }
-      rawData = await DataManager(appAction: AppAction.callKosarbaHelyezes).beginCall;
-      if(orderBeforeRefresh != null) _prioritizeOrder(orderBeforeRefresh);
-      rawDataBeforeOverride = null;
-      if(!mounted) return;
-      setState((){
-        _index            = null;
-        selectedAmount    = null;
-              selectedStatus    = null;
-        basketID          = null;
-        selectedPackageID = null;
-        _work             = rawData.isEmpty ? Work.default0 : Work.packageIdScan;
-      });
     }
     catch(e){
       if(kDebugMode) print(e.toString());
     }
+    finally{
+      operationOngoing = false;
+      if(mounted) setState((){});
+    }
   }
 
   Future<void> buttonMaterialNotFoundPressed() async{
-    if(index == null) return;
+    if(operationOngoing || finalCheckOngoing || index == null) return;
     if(await Global.yesNoDialog(
       context,
       title:    '⚠️ Anyag nem található!',
@@ -1075,51 +1095,68 @@ class RouteKosarbaHelyezesState extends State<RouteKosarbaHelyezes> {//---------
   }
 
   Future<void> buttonEnterBasketIDPressed() async{
-    scanOngoing = true;
+    if(operationOngoing || finalCheckOngoing) return;
+    operationOngoing = true;
+    if(mounted) setState((){});
     try{
       basketID = (await Global.integerDialog(
         context,
         title:   'ℹ️ Kosár azonosító',
         content: 'Adja meg a kosár azonosítóját:',
-      ))?.toString();      
+      ))?.toString();
       if(basketID != null && mounted){
         setState(() => setWork());
       }
     }
     finally{
-      scanOngoing = false;
+      operationOngoing = false;
+      if(mounted) setState((){});
     }
   }
 
   Future<void> buttonPlacementCompletePressed() async{
+    if(operationOngoing || finalCheckOngoing) return;
     if(index == null || selectedStatus != 1 || basketID == null) return;
-    String orderBefore = _orderID(rawData[index!]);
-    String? packageBefore = selectedPackageID;
-    setState(() => _attachBasketToSelectedRecord());
-    if(await finalCheck()) return;
-    if(!mounted) return;
-    bool packageCompleted =
-      packageBefore != null &&
-      !rawData.any((item) =>
-        _orderID(item) == orderBefore &&
-        item['package_id']?.toString() == packageBefore &&
-        _setRecordStatus(item) == RStatus.default0
-      );
-    setState((){
-      _index = null;
-      selectedAmount = null;
-      selectedStatus = null;
-      basketID = null;
-      if(packageCompleted){
-        selectedPackageID = null;
-        _work = Work.packageIdScan;
-      }else{
-        _work = Work.itemSelection;
+    operationOngoing = true;
+    if(mounted) setState((){});
+    bool routeFinished = false;
+    try{
+      String orderBefore = _orderID(rawData[index!]);
+      String? packageBefore = selectedPackageID;
+      setState(() => _attachBasketToSelectedRecord());
+      routeFinished = await finalCheck();
+      if(routeFinished) return;
+      if(!mounted) return;
+      bool packageCompleted =
+        packageBefore != null &&
+        !rawData.any((item) =>
+          _orderID(item) == orderBefore &&
+          item['package_id']?.toString() == packageBefore &&
+          _setRecordStatus(item) == RStatus.default0
+        );
+      setState((){
+        _index = null;
+        selectedAmount = null;
+        selectedStatus = null;
+        basketID = null;
+        if(packageCompleted){
+          selectedPackageID = null;
+          _work = Work.packageIdScan;
+        }else{
+          _work = Work.itemSelection;
+        }
+      });
+    }
+    finally{
+      if(!routeFinished){
+        operationOngoing = false;
+        if(mounted) setState((){});
       }
-    });
+    }
   }
 
   Future<void> handlePop() async{
+    if(operationOngoing || finalCheckOngoing) return;
     if(work != Work.packageIdScan){
       if(!mounted) return;
       setState((){
@@ -1129,33 +1166,42 @@ class RouteKosarbaHelyezesState extends State<RouteKosarbaHelyezes> {//---------
         }
         _index            = null;
         selectedAmount    = null;
-              selectedStatus    = null;
+        selectedStatus    = null;
         basketID          = null;
         selectedPackageID = null;
         _work             = Work.packageIdScan;
       });
       return;
     }
-    if(await Global.yesNoDialog(
-      context,
-      title:    '⚠️ Kilépés',
-      content:  'Félbe kívánja szakítani a Kosárba helyezést?',
-      options:  const ['Igen', 'Mégsem'],
-    )){
+    operationOngoing = true;
+    if(mounted) setState((){});
+    bool routeFinished = false;
+    try{
+      if(!await Global.yesNoDialog(
+        context,
+        title:    '⚠️ Kilépés',
+        content:  'Félbe kívánja szakítani a Kosárba helyezést?',
+        options:  const ['Igen', 'Mégsem'],
+      )) return;
       await DataManager(
         appAction: AppAction.callFinishKosarbaHelyezes,
         input:     {'data': completedData},
       ).beginCall;
       Global.routeBack;
-      if(mounted){
-        Navigator.pop(context);
+      routeFinished = true;
+      if(mounted) Navigator.pop(context);
+    }
+    finally{
+      if(!routeFinished){
+        operationOngoing = false;
+        if(mounted) setState((){});
       }
     }
   }
 
   // ---------- < Methods [2] > --------- ---------- ---------- ---------- ---------- ---------- ---------- ---------- ---------- ---------- ---------- //
   Future<void> _triggerScan() async{
-    if(scanOngoing) return;
+    if(scanOngoing || operationOngoing || finalCheckOngoing) return;
     scanOngoing = true;
     try{
       switch(work){
@@ -1258,8 +1304,10 @@ class RouteKosarbaHelyezesState extends State<RouteKosarbaHelyezes> {//---------
   }
 
   Future<void> undoRecord(dynamic item) async{
-    if(_setRecordStatus(item) == RStatus.default0) return;
+    if(operationOngoing || finalCheckOngoing || _setRecordStatus(item) == RStatus.default0) return;
+    operationOngoing = true;
     scanOngoing = true;
+    if(mounted) setState((){});
     try{
       if(!await Global.yesNoDialog(
         context,
@@ -1281,8 +1329,7 @@ class RouteKosarbaHelyezesState extends State<RouteKosarbaHelyezes> {//---------
           int remainingAmount = int.tryParse(rawData[remainingIndex]['mennyiseg']?.toString() ?? '') ?? 0;
           rawData[remainingIndex]['mennyiseg'] = remainingAmount + cancelledAmount;
           rawData.removeAt(itemIndex);
-        }
-        else{
+        }else{
           Map<String, dynamic> restoredItem = Map<String, dynamic>.from(item);
           restoredItem.remove('ok');
           restoredItem.remove('kosar_id');
@@ -1300,6 +1347,8 @@ class RouteKosarbaHelyezesState extends State<RouteKosarbaHelyezes> {//---------
     }
     finally{
       scanOngoing = false;
+      operationOngoing = false;
+      if(mounted) setState((){});
     }
   }
 
@@ -1401,17 +1450,28 @@ class RouteKosarbaHelyezesState extends State<RouteKosarbaHelyezes> {//---------
 
   Future<bool> finalCheck() async{
     if(rawData.any((item) => _setRecordStatus(item) == RStatus.default0)) return false;
-    await DataManager(
-      appAction: AppAction.callFinishKosarbaHelyezes,
-      input:     {'data': completedData},
-    ).beginCall;
-    await Global.showAlertDialog(
-      context,
-      title:   'ℹ️ Előkezelés befejezve!',
-      content: 'Nincs több teendő!',
-    );
-    Global.routeBack;
-    if(mounted) {Navigator.pop(context);}
-    return true;
+    if(finalCheckOngoing) return true;
+    finalCheckOngoing = true;
+    if(mounted) setState((){});
+    try{
+      await DataManager(
+        appAction: AppAction.callFinishKosarbaHelyezes,
+        input:     {'data': completedData},
+      ).beginCall;
+      await Global.showAlertDialog(
+        context,
+        title:   'ℹ️ Előkezelés befejezve!',
+        content: 'Nincs több teendő!',
+      );
+      Global.routeBack;
+      if(mounted) Navigator.pop(context);
+      return true;
+    }
+    catch(e){
+      finalCheckOngoing = false;
+      if(mounted) setState((){});
+      rethrow;
+    }
   }
+
 }

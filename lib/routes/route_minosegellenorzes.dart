@@ -14,6 +14,8 @@ class RouteMinosegellenorzes extends StatefulWidget{
 class RouteMinosegellenorzesState extends State<RouteMinosegellenorzes>{
   static List<dynamic> rawData = [];
   late double _contentWidth;
+  bool operationOngoing = false;
+  String? savingGerendaID;
 
   @override
   Widget build(BuildContext context){
@@ -93,9 +95,26 @@ class RouteMinosegellenorzesState extends State<RouteMinosegellenorzes>{
             width: double.infinity,
             height: 48,
             child: ElevatedButton.icon(
-              onPressed: readyToClose && !resolved ? () => _closeGerenda(gerenda) : null,
-              icon: const Icon(Icons.save_outlined),
-              label: Text(resolved ? 'Mentve' : 'Mentés'),
+              onPressed: readyToClose && !resolved && !operationOngoing
+                ? () => _closeGerenda(gerenda)
+                : null,
+              icon: savingGerendaID == gerenda['gerenda_id']?.toString()
+                ? const SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                    ),
+                  )
+                : const Icon(Icons.save_outlined),
+              label: Text(
+                savingGerendaID == gerenda['gerenda_id']?.toString()
+                  ? 'Mentés...'
+                  : resolved
+                    ? 'Mentve'
+                    : 'Mentés',
+              ),
               style: ElevatedButton.styleFrom(
                 backgroundColor: const Color(0xFF2F2587),
                 foregroundColor: Colors.white,
@@ -165,9 +184,17 @@ class RouteMinosegellenorzesState extends State<RouteMinosegellenorzes>{
           closed
             ? Icon(accepted ? Icons.check_circle : Icons.cancel, color: accepted ? const Color(0xFF229944) : const Color(0xFFCC3333), size: 34)
             : Column(children: [
-                _drawDecisionButton(Icons.check, const Color(0xFF229944), () => _acceptItem(item)),
+                _drawDecisionButton(
+                  Icons.check,
+                  const Color(0xFF229944),
+                  operationOngoing ? null : () => _acceptItem(item),
+                ),
                 const SizedBox(height: 8),
-                _drawDecisionButton(Icons.close, const Color(0xFFCC3333), () => _rejectItem(item)),
+                _drawDecisionButton(
+                  Icons.close,
+                  const Color(0xFFCC3333),
+                  operationOngoing ? null : () => _rejectItem(item),
+                ),
               ]),
         ],
       ),
@@ -183,8 +210,8 @@ class RouteMinosegellenorzesState extends State<RouteMinosegellenorzes>{
     ],
   );
 
-  Widget _drawDecisionButton(IconData icon, Color color, VoidCallback onPressed) => Material(
-    color: color,
+  Widget _drawDecisionButton(IconData icon, Color color, VoidCallback? onPressed) => Material(
+    color: onPressed == null ? color.withOpacity(0.45) : color,
     elevation: 2,
     shape: const CircleBorder(),
     child: InkWell(
@@ -200,63 +227,116 @@ class RouteMinosegellenorzesState extends State<RouteMinosegellenorzes>{
   }
 
   Future<void> _acceptItem(dynamic item) async{
-    bool confirm = await Global.yesNoDialog(context, title: '⚠️ Megerősítés', content: '${_displayValue(item['cikkszam'])} cikkszámú terméket megfelelőnek ítéli?');
-    if(!confirm) return;
-    if(!mounted) return;
-    setState((){
-      item['selejt_mennyiseg'] = 0;
-      item['kiertekeles'] = 1;
-      item['time_stamp'] = DateFormat('yyyy-MM-dd HH:mm:ss').format(DateTime.now());
-      item['user_id'] = DataManager.userID;
-    });
+    if(operationOngoing) return;
+    operationOngoing = true;
+    if(mounted) setState((){});
+    try{
+      bool confirm = await Global.yesNoDialog(
+        context,
+        title: '⚠️ Megerősítés',
+        content: '${_displayValue(item['cikkszam'])} cikkszámú terméket megfelelőnek ítéli?',
+      );
+      if(!confirm) return;
+      if(!mounted) return;
+      setState((){
+        item['selejt_mennyiseg'] = 0;
+        item['kiertekeles'] = 1;
+        item['time_stamp'] = DateFormat('yyyy-MM-dd HH:mm:ss').format(DateTime.now());
+        item['user_id'] = DataManager.userID;
+      });
+    }
+    finally{
+      operationOngoing = false;
+      if(mounted) setState((){});
+    }
   }
 
   Future<void> _rejectItem(dynamic item) async{
-    Map<String, dynamic>? result = await _rejectDialog(item);
-    if(result == null) return;
-    int rejectedAmount = result['selejt_mennyiseg'];
-    int originalAmount = int.tryParse(item['mennyiseg']?.toString() ?? '') ?? 0;
-    if(!mounted) return;
-    setState((){
-      if(rejectedAmount < originalAmount){
-        Map<String, dynamic> remainingItem = Map<String, dynamic>.from(item);
-        remainingItem['mennyiseg'] = originalAmount - rejectedAmount;
-        remainingItem['folyamat_id'] = 0;
-        remainingItem.remove('selejt_mennyiseg');
-        remainingItem.remove('kiertekeles');
-        remainingItem.remove('megjegyzes');
-        remainingItem.remove('time_stamp');
-        remainingItem['user_id'] = DataManager.userID;
-        for(dynamic gerenda in rawData){
-          List<dynamic> items = gerenda['tetelek'] is List ? gerenda['tetelek'] : [];
-          int itemIndex = items.indexWhere((record) => identical(record, item));
-          if(itemIndex < 0) continue;
-          items.insert(itemIndex + 1, remainingItem);
-          break;
+    if(operationOngoing) return;
+    operationOngoing = true;
+    if(mounted) setState((){});
+    try{
+      Map<String, dynamic>? result = await _rejectDialog(item);
+      if(result == null) return;
+      int rejectedAmount = result['selejt_mennyiseg'];
+      int originalAmount = int.tryParse(item['mennyiseg']?.toString() ?? '') ?? 0;
+      if(!mounted) return;
+      setState((){
+        if(rejectedAmount < originalAmount){
+          Map<String, dynamic> remainingItem = Map<String, dynamic>.from(item);
+          remainingItem['mennyiseg'] = originalAmount - rejectedAmount;
+          remainingItem['folyamat_id'] = 0;
+          remainingItem.remove('selejt_mennyiseg');
+          remainingItem.remove('kiertekeles');
+          remainingItem.remove('megjegyzes');
+          remainingItem.remove('time_stamp');
+          remainingItem['user_id'] = DataManager.userID;
+          for(dynamic gerenda in rawData){
+            List<dynamic> items = gerenda['tetelek'] is List ? gerenda['tetelek'] : [];
+            int itemIndex = items.indexWhere((record) => identical(record, item));
+            if(itemIndex < 0) continue;
+            items.insert(itemIndex + 1, remainingItem);
+            break;
+          }
         }
-      }
-      item['mennyiseg'] = rejectedAmount;
-      item['selejt_mennyiseg'] = rejectedAmount;
-      item['kiertekeles'] = 0;
-      item['megjegyzes'] = result['megjegyzes'];
-      item['time_stamp'] = DateFormat('yyyy-MM-dd HH:mm:ss').format(DateTime.now());
-      item['user_id'] = DataManager.userID;
-    });
+        item['mennyiseg'] = rejectedAmount;
+        item['selejt_mennyiseg'] = rejectedAmount;
+        item['kiertekeles'] = 0;
+        item['megjegyzes'] = result['megjegyzes'];
+        item['time_stamp'] = DateFormat('yyyy-MM-dd HH:mm:ss').format(DateTime.now());
+        item['user_id'] = DataManager.userID;
+      });
+    }
+    finally{
+      operationOngoing = false;
+      if(mounted) setState((){});
+    }
   }
 
   Future<void> _closeGerenda(dynamic gerenda) async{
-    List<dynamic> dataToSend = [Map<String, dynamic>.from(gerenda)];
-    await DataManager(appAction: AppAction.callFinishMinosegellenorzes, input: {'data': dataToSend}).beginCall;
-    dynamic refreshedData = await DataManager(appAction: AppAction.callMinosegellenorzes).beginCall;
-    if(!mounted) return;
-    setState(() => rawData = refreshedData);
+    String gerendaID = gerenda['gerenda_id']?.toString() ?? '';
+    if(operationOngoing || gerendaID.isEmpty) return;
+    operationOngoing = true;
+    savingGerendaID = gerendaID;
+    if(mounted) setState((){});
+    try{
+      List<dynamic> dataToSend = [Map<String, dynamic>.from(gerenda)];
+      await DataManager(
+        appAction: AppAction.callFinishMinosegellenorzes,
+        input: {'data': dataToSend},
+      ).beginCall;
+      dynamic refreshedData = await DataManager(appAction: AppAction.callMinosegellenorzes).beginCall;
+      if(!mounted) return;
+      setState(() => rawData = refreshedData);
+    }
+    finally{
+      savingGerendaID = null;
+      operationOngoing = false;
+      if(mounted) setState((){});
+    }
   }
 
   Future<void> _finishAllAndPop() async{
-    await DataManager(appAction: AppAction.callFinishMinosegellenorzes, input: {'data': rawData}).beginCall;
-    if(!mounted) return;
-    Global.routeBack;
-    Navigator.pop(context);
+    if(operationOngoing) return;
+    operationOngoing = true;
+    if(mounted) setState((){});
+    bool routeFinished = false;
+    try{
+      await DataManager(
+        appAction: AppAction.callFinishMinosegellenorzes,
+        input: {'data': rawData},
+      ).beginCall;
+      if(!mounted) return;
+      Global.routeBack;
+      routeFinished = true;
+      Navigator.pop(context);
+    }
+    finally{
+      if(!routeFinished){
+        operationOngoing = false;
+        if(mounted) setState((){});
+      }
+    }
   }
 
   Future<Map<String, dynamic>?> _rejectDialog(dynamic item) async{
@@ -264,18 +344,24 @@ class RouteMinosegellenorzesState extends State<RouteMinosegellenorzes>{
     TextEditingController noteController = TextEditingController();
     int maxAmount = int.tryParse(item['mennyiseg']?.toString() ?? '') ?? 1;
     String? amountError;
+    bool submitOngoing = false;
     return await showDialog<Map<String, dynamic>>(
       context: context,
       barrierDismissible: false,
       builder: (dialogContext) => StatefulBuilder(
         builder: (context, setDialogState){
           void submit(){
+            if(submitOngoing) return;
             int? amount = int.tryParse(amountController.text);
             if(amount == null || amount < 1 || amount > maxAmount){
               setDialogState(() => amountError = 'Adjon meg 1 és $maxAmount közötti értéket!');
               return;
             }
-            Navigator.pop(dialogContext, {'selejt_mennyiseg': amount, 'megjegyzes': noteController.text.trim()});
+            submitOngoing = true;
+            Navigator.pop(dialogContext, {
+              'selejt_mennyiseg': amount,
+              'megjegyzes': noteController.text.trim(),
+            });
           }
           return AlertDialog(
             title: const Row(children: [
